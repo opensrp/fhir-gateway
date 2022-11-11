@@ -10,6 +10,10 @@ on:
 
 jobs:
   release:
+    # depending on default permission settings for your org (contents being read-only or read-write for workloads), you will have to add permissions
+    # see: https://docs.github.com/en/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -23,12 +27,12 @@ jobs:
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
       - name: Install Helm
-        uses: azure/setup-helm@v1
+        uses: azure/setup-helm@v3
         with:
-          version: v3.5.0
+          version: v3.10.0
 
       - name: Run chart-releaser
-        uses: helm/chart-releaser-action@v1.2.0 # step that writes the latest chart versions (below) depends on this step writing the latest version as the first index in the entries.<name of chart> list in the index.yaml file
+        uses: helm/chart-releaser-action@v1.4.1 # step that writes the latest chart versions (below) depends on this step writing the latest version as the first index in the entries.<name of chart> list in the index.yaml file
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
