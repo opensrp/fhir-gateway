@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - main
+      - add-index-file
 
 jobs:
   release:
@@ -31,34 +32,34 @@ jobs:
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
-      - name: Install Python
-        uses: actions/setup-python@v1
-
-      - name: Install pip requirements
-        uses: BSFishy/pip-action@v1
-        with:
-          packages: |
-            shyaml==0.6.2
-
-      - name: Checkout gh-pages
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-          ref: gh-pages
-
-      - name: Record the latest chart versions
-        run: |
-          releaseDir="latest"
-          if [[ ! -d ${releaseDir} ]]; then
-            mkdir -p ${releaseDir}
-          fi
-          charts=($(cat index.yaml | shyaml keys entries))
-          for curChart in "${charts[@]}"; do
-            curChartVersion=$(cat index.yaml | shyaml get-value entries.${curChart}.0.version)
-            echo ${curChartVersion} > ${releaseDir}/${curChart}
-          done
-
-      - uses: EndBug/add-and-commit@v7
-        with:
-          message: 'Set the latest the chart versions'
-          branch: gh-pages
+#      - name: Install Python
+#        uses: actions/setup-python@v1
+#
+#      - name: Install pip requirements
+#        uses: BSFishy/pip-action@v1
+#        with:
+#          packages: |
+#            shyaml==0.6.2
+#
+#      - name: Checkout gh-pages
+#        uses: actions/checkout@v2
+#        with:
+#          fetch-depth: 0
+#          ref: gh-pages
+#
+#      - name: Record the latest chart versions
+#        run: |
+#          releaseDir="latest"
+#          if [[ ! -d ${releaseDir} ]]; then
+#            mkdir -p ${releaseDir}
+#          fi
+#          charts=($(cat index.yaml | shyaml keys entries))
+#          for curChart in "${charts[@]}"; do
+#            curChartVersion=$(cat index.yaml | shyaml get-value entries.${curChart}.0.version)
+#            echo ${curChartVersion} > ${releaseDir}/${curChart}
+#          done
+#
+#      - uses: EndBug/add-and-commit@v7
+#        with:
+#          message: 'Set the latest the chart versions'
+#          branch: gh-pages
