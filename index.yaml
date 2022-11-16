@@ -3,6 +3,22 @@ entries:
   fhir-access-proxy:
   - apiVersion: v2
     appVersion: 0.0.1
+    created: "2022-11-16T13:31:14.438010975Z"
+    description: 'This is a simple access-control proxy that sits in front of a [FHIR](https://www.hl7.org/fhir/)
+      store (e.g., a [HAPI FHIR](https://hapifhir.io/) server, [GCP FHIR store](https://cloud.google.com/healthcare-api/docs/concepts/fhir),
+      etc.) and controls access to FHIR resources. '
+    digest: 70b8c5341037eed2ef3a5b3994b6ae334b51d63d424d4cab3777823150dd4d8a
+    icon: https://avatars2.githubusercontent.com/u/7898027?s=200&v=4
+    maintainers:
+    - email: techops@ona.io
+      name: opensrp
+    name: fhir-access-proxy
+    type: application
+    urls:
+    - https://github.com/opensrp/fhir-access-proxy/releases/download/fhir-access-proxy-0.0.3/fhir-access-proxy-0.0.3.tgz
+    version: 0.0.3
+  - apiVersion: v2
+    appVersion: 0.0.1
     created: "2022-11-11T14:05:24.9043632Z"
     description: 'This is a simple access-control proxy that sits in front of a [FHIR](https://www.hl7.org/fhir/)
       store (e.g., a [HAPI FHIR](https://hapifhir.io/) server, [GCP FHIR store](https://cloud.google.com/healthcare-api/docs/concepts/fhir),
@@ -33,4 +49,4 @@ entries:
     urls:
     - https://github.com/opensrp/fhir-access-proxy/releases/download/fhir-access-proxy-0.0.1/fhir-access-proxy-0.0.1.tgz
     version: 0.0.1
-generated: "2022-11-11T14:05:24.90436863Z"
+generated: "2022-11-16T13:31:14.438035476Z"
