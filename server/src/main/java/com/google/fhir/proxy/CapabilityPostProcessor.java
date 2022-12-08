@@ -95,7 +95,5 @@ public class CapabilityPostProcessor implements AccessDecision {
   }
 
   @Override
-  public void preProcess(ServletRequestDetails servletRequestDetails) {
-
-  }
+  public void preProcess(ServletRequestDetails servletRequestDetails) {}
 }

@@ -37,8 +37,7 @@ public final class NoOpAccessDecision implements AccessDecision {
   }
 
   @Override
-  public void preProcess(ServletRequestDetails servletRequestDetails) {
-  }
+  public void preProcess(ServletRequestDetails servletRequestDetails) {}
 
   public static AccessDecision accessGranted() {
     return new NoOpAccessDecision(true);
