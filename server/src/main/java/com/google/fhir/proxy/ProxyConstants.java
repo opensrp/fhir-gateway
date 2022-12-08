@@ -40,5 +40,4 @@ public class ProxyConstants {
   public interface Literals {
     String EQUALS = "=";
   }
-
 }

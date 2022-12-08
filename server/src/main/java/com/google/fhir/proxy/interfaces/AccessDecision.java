@@ -15,9 +15,8 @@
  */
 package com.google.fhir.proxy.interfaces;
 
-import java.io.IOException;
-
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
+import java.io.IOException;
 import org.apache.http.HttpResponse;
 
 public interface AccessDecision {
