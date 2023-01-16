@@ -21,7 +21,7 @@
 
   <groupId>com.google.fhir.proxy</groupId>
   <artifactId>fhir-proxy</artifactId>
-  <version>0.1.0</version>
+  <version>0.1.0-Beta</version>
   <packaging>pom</packaging>
 
   <name>FHIR Access Proxy</name>
@@ -41,6 +41,19 @@
     <spring-boot.version>2.6.6</spring-boot.version>
     <license-maven-plugin.version>4.1</license-maven-plugin.version>
   </properties>
+
+  <distributionManagement>
+    <repository>
+      <id>nexus-releases</id>
+      <url>https://oss.sonatype.org/service/local/staging/deploy/maven2</url>
+    </repository>
+    <snapshotRepository>
+      <id>nexus-snapshots</id>
+      <name>Nexus Snapshots Repository</name>
+      <uniqueVersion>false</uniqueVersion>
+      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+    </snapshotRepository>
+  </distributionManagement>
 
   <dependencies>
 
