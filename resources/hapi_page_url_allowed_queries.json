@@ -18,6 +18,15 @@
       "allParamsRequired": true
     },
     {
+      "path": "Composition",
+      "methodType": "GET",
+      "queryParams": {
+        "identifier":"ANY_VALUE"
+      },
+      "allowExtraParams": true,
+      "allParamsRequired": true
+    },
+    {
       "path": "Binary/ANY_VALUE",
       "methodType": "GET",
       "queryParams": {
