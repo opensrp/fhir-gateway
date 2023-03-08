@@ -18,10 +18,10 @@
       "allParamsRequired": true
     },
     {
-      "path": "Binary/ANY_VALUE",
+      "path": "Binary",
       "methodType": "GET",
       "queryParams": {
-
+        "_id":"ANY_VALUE"
       },
       "allowExtraParams": true,
       "allParamsRequired": false
