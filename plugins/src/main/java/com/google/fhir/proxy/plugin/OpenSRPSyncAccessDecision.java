@@ -45,14 +45,14 @@ public class OpenSRPSyncAccessDecision implements AccessDecision {
   private static final Logger logger = LoggerFactory.getLogger(OpenSRPSyncAccessDecision.class);
   private static final int LENGTH_OF_SEARCH_PARAM_AND_EQUALS = 5;
   private final List<String> syncStrategy;
-  private String applicationId;
-  private boolean accessGranted;
+  private final String applicationId;
+  private final boolean accessGranted;
 
-  private List<String> careTeamIds;
+  private final List<String> careTeamIds;
 
-  private List<String> locationIds;
+  private final List<String> locationIds;
 
-  private List<String> organizationIds;
+  private final List<String> organizationIds;
   private IgnoredResourcesConfig config;
 
   public OpenSRPSyncAccessDecision(
@@ -271,13 +271,9 @@ public class OpenSRPSyncAccessDecision implements AccessDecision {
           }
 
           if (expectedParam.getValue() instanceof List) {
-
-            if (CollectionUtils.isEqualCollection(
-                (List) expectedParam.getValue(), Arrays.asList(actualQueryValue[0].split(",")))) {
-              return true;
-            } else {
-              return false;
-            }
+  
+            return CollectionUtils.isEqualCollection(
+                    (List) expectedParam.getValue(), Arrays.asList(actualQueryValue[0].split(",")));
 
           } else if (actualQueryValue[0].equals(expectedParam.getValue())) {
             return true;
