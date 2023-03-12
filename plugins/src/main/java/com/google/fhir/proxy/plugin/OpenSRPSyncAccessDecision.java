@@ -271,9 +271,8 @@ public class OpenSRPSyncAccessDecision implements AccessDecision {
           }
 
           if (expectedParam.getValue() instanceof List) {
-  
             return CollectionUtils.isEqualCollection(
-                    (List) expectedParam.getValue(), Arrays.asList(actualQueryValue[0].split(",")));
+                (List) expectedParam.getValue(), Arrays.asList(actualQueryValue[0].split(",")));
 
           } else if (actualQueryValue[0].equals(expectedParam.getValue())) {
             return true;
