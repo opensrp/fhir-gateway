@@ -24,7 +24,7 @@
         "_id":"ANY_VALUE"
       },
       "allowExtraParams": true,
-      "allParamsRequired": false
+      "allParamsRequired": true
     }
   ]
 }
