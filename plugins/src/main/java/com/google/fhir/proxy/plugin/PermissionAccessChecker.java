@@ -313,15 +313,6 @@ public class PermissionAccessChecker implements AccessChecker {
       lst.add(tokenParam);
       hmOut.put(PractitionerDetails.SP_KEYCLOAK_UUID, lst);
 
-      // Adding isAuthProvided
-      // TODO this is no longer necessary after the update to remove the keycloak details from the
-      // response
-      /*      SpecialParam isAuthProvided = new SpecialParam();
-      isAuthProvided.setValue("false");
-      List<IQueryParameterType> l = new ArrayList<IQueryParameterType>();
-      l.add(isAuthProvided);
-      hmOut.put(PractitionerDetails.SP_IS_AUTH_PROVIDED, l);*/
-
       return hmOut;
     }
 
