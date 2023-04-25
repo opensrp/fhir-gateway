@@ -1,7 +1,7 @@
 # FHIR Gateway
 
-[FHIR Gateway](../../README.md) is a simple access-control proxy that sits
-in front of FHIR store and server and controls access to FHIR resources.
+[FHIR Gateway](../../README.md) is a simple access-control proxy that sits in
+front of FHIR store and server and controls access to FHIR resources.
 
 ## TL;DR
 
@@ -43,15 +43,15 @@ deletes the release.
 
 ## Parameters
 
-The following table lists the configurable parameters of the FHIR Gateway
-chart and their default values.
+The following table lists the configurable parameters of the FHIR Gateway chart
+and their default values.
 
 ## Common Parameters
 
 | Parameter                                    | Description | Default                                                                                                                                                                                                                                                                                  |
 | -------------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `replicaCount`                               |             | `1`                                                                                                                                                                                                                                                                                      |
-| `image.repository`                           |             | `"opensrp/fhir-gateway"`                                                                                                                                                                                                                                                            |
+| `image.repository`                           |             | `"opensrp/fhir-gateway"`                                                                                                                                                                                                                                                                 |
 | `image.pullPolicy`                           |             | `"IfNotPresent"`                                                                                                                                                                                                                                                                         |
 | `image.tag`                                  |             | `"latest"`                                                                                                                                                                                                                                                                               |
 | `imagePullSecrets`                           |             | `[]`                                                                                                                                                                                                                                                                                     |
@@ -68,7 +68,7 @@ chart and their default values.
 | `ingress.enabled`                            |             | `false`                                                                                                                                                                                                                                                                                  |
 | `ingress.className`                          |             | `""`                                                                                                                                                                                                                                                                                     |
 | `ingress.annotations`                        |             | `{}`                                                                                                                                                                                                                                                                                     |
-| `ingress.hosts`                              |             | `[{"host": "fhir-gateway.local", "paths": [{"path": "/", "pathType": "ImplementationSpecific"}]}]`                                                                                                                                                                                  |
+| `ingress.hosts`                              |             | `[{"host": "fhir-gateway.local", "paths": [{"path": "/", "pathType": "ImplementationSpecific"}]}]`                                                                                                                                                                                       |
 | `ingress.tls`                                |             | `[]`                                                                                                                                                                                                                                                                                     |
 | `resources`                                  |             | `{}`                                                                                                                                                                                                                                                                                     |
 | `autoscaling.enabled`                        |             | `false`                                                                                                                                                                                                                                                                                  |
@@ -130,9 +130,8 @@ file).
 2.  Create a configmap volume type:
 
     - The name of the configMap resemble the ConfigMap manifest metadata.name
-      i.e. `fhir-gateway` but we obtain the generated name from the
-      function `'{{ include "fhir-gateway.fullname" . }}'` using tpl
-      function.
+      i.e. `fhir-gateway` but we obtain the generated name from the function
+      `'{{ include "fhir-gateway.fullname" . }}'` using tpl function.
 
     ```yaml
     volumes:
