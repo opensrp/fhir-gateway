@@ -375,6 +375,8 @@ public class BearerAuthorizationInterceptorTest {
             return true;
           }
 
+          public void preProcess(ServletRequestDetails servletRequestDetails) {}
+
           public RequestMutation getRequestMutation(RequestDetailsReader requestDetailsReader) {
             return RequestMutation.builder().queryParams(paramMutations).build();
           }
