@@ -177,8 +177,8 @@ public class OpenSRPSyncAccessDecision implements AccessDecision {
 
       int i = 0;
       for (String tagValue : values) {
-        urlStringBuilder.append(tagUrl);
-        urlStringBuilder.append(ProxyConstants.CODE_URL_VALUE_SEPARATOR);
+        // urlStringBuilder.append(tagUrl);
+        // urlStringBuilder.append(ProxyConstants.CODE_URL_VALUE_SEPARATOR);
         urlStringBuilder.append(tagValue);
 
         if (i != len - 1) {

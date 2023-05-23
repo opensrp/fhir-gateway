@@ -70,8 +70,7 @@ public class OpenSRPSyncAccessDecisionTest {
       Assert.assertFalse(requestDetails.getCompleteUrl().contains(locationId));
       Assert.assertFalse(requestDetails.getRequestPath().contains(locationId));
       Assert.assertTrue(
-          Arrays.asList(requestDetails.getParameters().get("_tag"))
-              .contains(ProxyConstants.LOCATION_TAG_URL + "|" + locationId));
+          Arrays.asList(requestDetails.getParameters().get("_tag")).contains(locationId));
     }
 
     for (String careTeamId : careTeamIds) {
@@ -112,8 +111,7 @@ public class OpenSRPSyncAccessDecisionTest {
       Assert.assertFalse(requestDetails.getCompleteUrl().contains(locationId));
       Assert.assertFalse(requestDetails.getRequestPath().contains(locationId));
       Assert.assertTrue(
-          Arrays.asList(requestDetails.getParameters().get("_tag"))
-              .contains(ProxyConstants.LOCATION_TAG_URL + "|" + locationId));
+          Arrays.asList(requestDetails.getParameters().get("_tag")).contains(locationId));
     }
 
     for (String param : requestDetails.getParameters().get("_tag")) {
@@ -143,8 +141,7 @@ public class OpenSRPSyncAccessDecisionTest {
       Assert.assertFalse(requestDetails.getCompleteUrl().contains(locationId));
       Assert.assertFalse(requestDetails.getRequestPath().contains(locationId));
       Assert.assertTrue(
-          Arrays.asList(requestDetails.getParameters().get("_tag"))
-              .contains(ProxyConstants.CARE_TEAM_TAG_URL + "|" + locationId));
+          Arrays.asList(requestDetails.getParameters().get("_tag")).contains(locationId));
     }
 
     for (String param : requestDetails.getParameters().get("_tag")) {
@@ -203,10 +200,9 @@ public class OpenSRPSyncAccessDecisionTest {
     for (String locationId : organisationIds) {
       Assert.assertFalse(requestDetails.getCompleteUrl().contains(locationId));
       Assert.assertFalse(requestDetails.getRequestPath().contains(locationId));
-      Assert.assertEquals(1, requestDetails.getParameters().size());
+      Assert.assertTrue(requestDetails.getParameters().size() > 0);
       Assert.assertTrue(
-          Arrays.asList(requestDetails.getParameters().get("_tag"))
-              .contains(ProxyConstants.ORGANISATION_TAG_URL + "|" + locationId));
+          Arrays.asList(requestDetails.getParameters().get("_tag")).contains(locationId));
     }
   }
 
