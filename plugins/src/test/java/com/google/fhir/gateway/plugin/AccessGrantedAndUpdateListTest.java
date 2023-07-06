@@ -16,6 +16,7 @@
 package com.google.fhir.gateway.plugin;
 
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import com.google.common.io.Resources;
 import com.google.fhir.gateway.HttpFhirClient;
 import java.io.IOException;
@@ -39,6 +40,9 @@ public class AccessGrantedAndUpdateListTest {
   @Mock(answer = Answers.RETURNS_DEEP_STUBS)
   private HttpResponse responseMock;
 
+  @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+  private ServletRequestDetails requestDetailsMock;
+
   private static final FhirContext fhirContext = FhirContext.forR4();
 
   private AccessGrantedAndUpdateList testInstance;
@@ -55,7 +59,7 @@ public class AccessGrantedAndUpdateListTest {
     testInstance =
         AccessGrantedAndUpdateList.forPatientResource(
             TEST_LIST_ID, httpFhirClientMock, fhirContext);
-    testInstance.postProcess(responseMock);
+    testInstance.postProcess(requestDetailsMock, responseMock);
   }
 
   @Test
@@ -63,6 +67,6 @@ public class AccessGrantedAndUpdateListTest {
     testInstance =
         AccessGrantedAndUpdateList.forPatientResource(
             TEST_LIST_ID, httpFhirClientMock, fhirContext);
-    testInstance.postProcess(responseMock);
+    testInstance.postProcess(requestDetailsMock, responseMock);
   }
 }

@@ -381,7 +381,9 @@ public class BearerAuthorizationInterceptorTest {
             return RequestMutation.builder().queryParams(paramMutations).build();
           }
 
-          public String postProcess(HttpResponse response) throws IOException {
+          @Override
+          public String postProcess(ServletRequestDetails request, HttpResponse response)
+              throws IOException {
             return null;
           }
         };
