@@ -66,6 +66,7 @@ public class OpenSRPSyncAccessDecision implements AccessDecision {
   private final List<String> organizationIds;
   private IgnoredResourcesConfig config;
   private Gson gson = new Gson();
+
   private FhirContext fhirR4Context = FhirContext.forR4();
   private IParser fhirR4JsonParser = fhirR4Context.newJsonParser();
 
@@ -348,7 +349,6 @@ public class OpenSRPSyncAccessDecision implements AccessDecision {
   }
 
   private IGenericClient createFhirClientForR4() {
-    ;
     return fhirR4Context.newRestfulGenericClient(System.getenv(PROXY_TO_ENV));
   }
 
@@ -373,6 +373,16 @@ public class OpenSRPSyncAccessDecision implements AccessDecision {
           + Arrays.toString(queryParams.entrySet().toArray())
           + '}';
     }
+  }
+
+  @VisibleForTesting
+  protected void setFhirR4Context(FhirContext fhirR4Context) {
+    this.fhirR4Context = fhirR4Context;
+  }
+
+  @VisibleForTesting
+  protected void setFhirR4JsonParser(IParser fhirR4JsonParser) {
+    this.fhirR4JsonParser = fhirR4JsonParser;
   }
 
   public static final class Constants {
