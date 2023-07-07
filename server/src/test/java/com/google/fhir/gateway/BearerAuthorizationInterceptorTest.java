@@ -382,8 +382,8 @@ public class BearerAuthorizationInterceptorTest {
           }
 
           @Override
-          public String postProcess(ServletRequestDetails request, HttpResponse response)
-              throws IOException {
+          public String postProcess(
+              RequestDetailsReader requestDetailsReader, HttpResponse response) throws IOException {
             return null;
           }
         };

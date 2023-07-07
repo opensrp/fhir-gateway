@@ -37,7 +37,7 @@ public final class NoOpAccessDecision implements AccessDecision {
   }
 
   @Override
-  public String postProcess(ServletRequestDetails request, HttpResponse response) {
+  public String postProcess(RequestDetailsReader requestDetailsReader, HttpResponse response) {
     return null;
   }
 

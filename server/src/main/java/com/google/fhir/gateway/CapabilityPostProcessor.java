@@ -66,7 +66,7 @@ public class CapabilityPostProcessor implements AccessDecision {
   }
 
   @Override
-  public String postProcess(ServletRequestDetails requestDetails, HttpResponse response)
+  public String postProcess(RequestDetailsReader requestDetails, HttpResponse response)
       throws IOException {
     Preconditions.checkState(HttpUtil.isResponseValid(response));
     String content = CharStreams.toString(HttpUtil.readerFromEntity(response.getEntity()));

@@ -30,6 +30,7 @@ import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
 import com.google.fhir.gateway.HttpFhirClient;
 import com.google.fhir.gateway.ProxyConstants;
+import com.google.fhir.gateway.interfaces.RequestDetailsReader;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -343,7 +344,7 @@ public class OpenSRPSyncAccessDecisionTest {
 
     testInstance.setFhirR4Context(fhirR4Context);
 
-    ServletRequestDetails requestDetailsSpy = Mockito.mock(ServletRequestDetails.class);
+    RequestDetailsReader requestDetailsSpy = Mockito.mock(RequestDetailsReader.class);
 
     Mockito.when(requestDetailsSpy.getHeader(OpenSRPSyncAccessDecision.Constants.FHIR_GATEWAY_MODE))
         .thenReturn(OpenSRPSyncAccessDecision.Constants.LIST_ENTRIES);
@@ -385,7 +386,7 @@ public class OpenSRPSyncAccessDecisionTest {
   public void testPostProcessWithoutListModeHeaderShouldShouldReturnNull() throws IOException {
     testInstance = createOpenSRPSyncAccessDecisionTestInstance();
 
-    ServletRequestDetails requestDetailsSpy = Mockito.mock(ServletRequestDetails.class);
+    RequestDetailsReader requestDetailsSpy = Mockito.mock(RequestDetailsReader.class);
     Mockito.when(requestDetailsSpy.getHeader(OpenSRPSyncAccessDecision.Constants.FHIR_GATEWAY_MODE))
         .thenReturn("");
 

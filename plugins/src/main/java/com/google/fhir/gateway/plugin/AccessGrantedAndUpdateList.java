@@ -76,7 +76,7 @@ class AccessGrantedAndUpdateList implements AccessDecision {
   }
 
   @Override
-  public String postProcess(ServletRequestDetails request, HttpResponse response)
+  public String postProcess(RequestDetailsReader request, HttpResponse response)
       throws IOException {
     Preconditions.checkState(HttpUtil.isResponseValid(response));
     String content = CharStreams.toString(HttpUtil.readerFromEntity(response.getEntity()));

@@ -16,9 +16,9 @@
 package com.google.fhir.gateway.plugin;
 
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import com.google.common.io.Resources;
 import com.google.fhir.gateway.HttpFhirClient;
+import com.google.fhir.gateway.interfaces.RequestDetailsReader;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -41,7 +41,7 @@ public class AccessGrantedAndUpdateListTest {
   private HttpResponse responseMock;
 
   @Mock(answer = Answers.RETURNS_DEEP_STUBS)
-  private ServletRequestDetails requestDetailsMock;
+  private RequestDetailsReader requestDetailsMock;
 
   private static final FhirContext fhirContext = FhirContext.forR4();
 
