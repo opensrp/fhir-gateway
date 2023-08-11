@@ -34,7 +34,7 @@ COPY pom.xml .
 
 RUN mvn spotless:check
 # Updating license will fail in e2e and there is no point doing it here anyways.
-RUN mvn --batch-mode package -Pstandalone-app -Dlicense.skip=true
+RUN mvn --batch-mode  package -Pstandalone-app -Dlicense.skip=true -DskipTests
 
 
 # Image for FHIR Gateway binary with configuration knobs as environment vars.
