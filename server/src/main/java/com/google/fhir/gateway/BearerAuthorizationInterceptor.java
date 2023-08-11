@@ -56,6 +56,7 @@ import java.security.spec.EncodedKeySpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
+import org.apache.commons.io.IOUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -362,6 +363,10 @@ public class BearerAuthorizationInterceptor {
     String fhirStoreUrl = fhirClient.getBaseUrl();
     int numMatched = 0;
     int n;
+    logger.info(String.format("proxyBase: %s, fhirStoreUrl: %s", proxyBase, fhirStoreUrl));
+    logger.info("=========== entityContentReader ===========");
+    logger.info(IOUtils.toString(entityContentReader));
+    logger.info("=========== entityContentReader ===========");
     while ((n = entityContentReader.read()) >= 0) {
       char c = (char) n;
       if (fhirStoreUrl.charAt(numMatched) == c) {
