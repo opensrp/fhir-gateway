@@ -98,7 +98,7 @@ public class OpenSRPHelper {
     List<String> officialLocationIds =
         getOfficialLocationIdentifiersByLocationIds(supervisorCareTeamOrganizationLocationIds);
     List<LocationHierarchy> locationHierarchies =
-        getLocationsHierarchyByOfficialLocationIdentifiers(officialLocationIds);
+        getLocationsHierarchyByLocationIds(officialLocationIds);
     List<String> attributedLocationsList = getAttributedLocations(locationHierarchies);
     List<String> attributedOrganizationIds =
         getOrganizationIdsByLocationIds(attributedLocationsList);
@@ -261,14 +261,8 @@ public class OpenSRPHelper {
     List<String> locationIds =
         getLocationIdentifiersByOrganizationAffiliations(organizationAffiliations);
 
-    List<String> locationsIdentifiers =
-        getOfficialLocationIdentifiersByLocationIds(
-            locationIds); // TODO Investigate why the Location ID and official identifiers are
-    // different
-
     logger.info("Searching for location hierarchy list by locations identifiers");
-    List<LocationHierarchy> locationHierarchyList =
-        getLocationsHierarchyByOfficialLocationIdentifiers(locationsIdentifiers);
+    List<LocationHierarchy> locationHierarchyList = getLocationsHierarchyByLocationIds(locationIds);
     fhirPractitionerDetails.setLocationHierarchyList(locationHierarchyList);
 
     logger.info("Searching for locations by ids");
@@ -503,15 +497,14 @@ public class OpenSRPHelper {
         .collect(Collectors.toList());
   }
 
-  private List<LocationHierarchy> getLocationsHierarchyByOfficialLocationIdentifiers(
-      List<String> officialLocationIdentifiers) {
-    if (officialLocationIdentifiers.isEmpty()) return new ArrayList<>();
+  private List<LocationHierarchy> getLocationsHierarchyByLocationIds(List<String> locationIds) {
+    if (locationIds.isEmpty()) return new ArrayList<>();
 
     Bundle bundle =
         getFhirClientForR4()
             .search()
             .forResource(LocationHierarchy.class)
-            .where(LocationHierarchy.IDENTIFIER.exactly().codes(officialLocationIdentifiers))
+            .where(LocationHierarchy.RES_ID.exactly().codes(locationIds))
             .returnBundle(Bundle.class)
             .execute();
 
