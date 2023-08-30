@@ -172,7 +172,7 @@ public class BearerAuthorizationInterceptor {
   }
 
   @VisibleForTesting
-  DecodedJWT decodeAndVerifyBearerToken(String authHeader) {
+  synchronized DecodedJWT decodeAndVerifyBearerToken(String authHeader) {
     if (!authHeader.startsWith(BEARER_PREFIX)) {
       ExceptionUtil.throwRuntimeExceptionAndLog(
           logger,
