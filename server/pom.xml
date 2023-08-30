@@ -21,7 +21,7 @@
   <parent>
     <groupId>com.google.fhir.gateway</groupId>
     <artifactId>fhir-gateway</artifactId>
-    <version>0.1.33</version>
+    <version>0.1.34</version>
   </parent>
 
   <artifactId>server</artifactId>
@@ -147,7 +147,7 @@
     <dependency>
       <groupId>org.smartregister</groupId>
       <artifactId>fhir-common-utils</artifactId>
-      <version>0.0.9-SNAPSHOT</version>
+      <version>0.0.10-SNAPSHOT</version>
     </dependency>
 
     <dependency>
