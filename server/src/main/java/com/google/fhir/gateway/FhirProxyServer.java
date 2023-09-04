@@ -97,13 +97,12 @@ public class FhirProxyServer extends RestfulServer {
       logger.info("Adding BearerAuthorizationInterceptor ");
       AccessCheckerFactory checkerFactory = chooseAccessCheckerFactory();
       HttpFhirClient httpFhirClient = chooseHttpFhirClient(backendType, fhirStore);
+      TokenVerifier tokenVerifier = TokenVerifier.createFromEnvVars();
       registerInterceptor(
           new BearerAuthorizationInterceptor(
               httpFhirClient,
-              tokenIssuer,
-              wellKnownEndpoint,
+              tokenVerifier,
               this,
-              new HttpUtil(),
               checkerFactory,
               new AllowedQueriesChecker(System.getenv(ALLOWED_QUERIES_FILE_ENV))));
     } catch (IOException e) {
