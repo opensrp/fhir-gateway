@@ -17,7 +17,6 @@ import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CareTeam;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.Group;
-import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.Location;
 import org.hl7.fhir.r4.model.Organization;
 import org.hl7.fhir.r4.model.OrganizationAffiliation;
@@ -93,12 +92,13 @@ public class OpenSRPHelper {
 
     List<String> careTeamManagingOrganizationIds =
         getManagingOrganizationsOfCareTeamIds(careTeamList);
-    List<String> supervisorCareTeamOrganizationLocationIds =
+
+    List<OrganizationAffiliation> organizationAffiliations =
         getOrganizationAffiliationsByOrganizationIds(careTeamManagingOrganizationIds);
-    List<String> officialLocationIds =
-        getOfficialLocationIdentifiersByLocationIds(supervisorCareTeamOrganizationLocationIds);
+    List<String> supervisorCareTeamOrganizationLocationIds =
+        getLocationIdsByOrganizationAffiliations(organizationAffiliations);
     List<LocationHierarchy> locationHierarchies =
-        getLocationsHierarchyByLocationIds(officialLocationIds);
+        getLocationsHierarchyByLocationIds(supervisorCareTeamOrganizationLocationIds);
     List<String> attributedLocationsList = getAttributedLocations(locationHierarchies);
     List<String> attributedOrganizationIds =
         getOrganizationIdsByLocationIds(attributedLocationsList);
@@ -258,8 +258,7 @@ public class OpenSRPHelper {
 
     fhirPractitionerDetails.setOrganizationAffiliations(organizationAffiliations);
 
-    List<String> locationIds =
-        getLocationIdentifiersByOrganizationAffiliations(organizationAffiliations);
+    List<String> locationIds = getLocationIdsByOrganizationAffiliations(organizationAffiliations);
 
     logger.info("Searching for location hierarchy list by locations identifiers");
     List<LocationHierarchy> locationHierarchyList = getLocationsHierarchyByLocationIds(locationIds);
@@ -406,35 +405,14 @@ public class OpenSRPHelper {
         .collect(Collectors.toList());
   }
 
-  private @Nullable List<String> getOfficialLocationIdentifiersByLocationIds(
-      List<String> locationIds) {
-    if (locationIds == null || locationIds.isEmpty()) {
-      return new ArrayList<>();
-    }
-
-    List<Location> locations = getLocationsByIds(locationIds);
-
-    return locations.stream()
-        .map(
-            it ->
-                it.getIdentifier().stream()
-                    .filter(
-                        id -> id.hasUse() && id.getUse().equals(Identifier.IdentifierUse.OFFICIAL))
-                    .map(it2 -> it2.getValue())
-                    .collect(Collectors.toList()))
-        .flatMap(it3 -> it3.stream())
-        .collect(Collectors.toList());
-  }
-
-  private List<String> getOrganizationAffiliationsByOrganizationIds(List<String> organizationIds) {
+  private List<OrganizationAffiliation> getOrganizationAffiliationsByOrganizationIds(
+      List<String> organizationIds) {
     if (organizationIds == null || organizationIds.isEmpty()) {
       return new ArrayList<>();
     }
     Bundle organizationAffiliationsBundle =
         getOrganizationAffiliationsByOrganizationIdsBundle(organizationIds);
-    List<OrganizationAffiliation> organizationAffiliations =
-        mapBundleToOrganizationAffiliation(organizationAffiliationsBundle);
-    return getLocationIdentifiersByOrganizationAffiliations(organizationAffiliations);
+    return mapBundleToOrganizationAffiliation(organizationAffiliationsBundle);
   }
 
   private Bundle getOrganizationAffiliationsByOrganizationIdsBundle(List<String> organizationIds) {
@@ -448,9 +426,8 @@ public class OpenSRPHelper {
             .execute();
   }
 
-  private List<String> getLocationIdentifiersByOrganizationAffiliations(
+  private List<String> getLocationIdsByOrganizationAffiliations(
       List<OrganizationAffiliation> organizationAffiliations) {
-
     return organizationAffiliations.stream()
         .map(
             organizationAffiliation ->
