@@ -389,12 +389,10 @@ public class OpenSRPSyncAccessDecisionTest {
     locationIds.add("Location-1");
     testInstance = Mockito.spy(createOpenSRPSyncAccessDecisionTestInstance());
 
-    FhirContext fhirR4Context = mock(FhirContext.class);
     IGenericClient iGenericClient = mock(IGenericClient.class);
     ITransaction iTransaction = mock(ITransaction.class);
     ITransactionTyped<Bundle> iClientExecutable = mock(ITransactionTyped.class);
     testInstance.setFhirR4Client(iGenericClient);
-    testInstance.setFhirR4Context(fhirR4Context);
 
     Mockito.when(iGenericClient.transaction()).thenReturn(iTransaction);
     Mockito.when(iTransaction.withBundle(any(Bundle.class))).thenReturn(iClientExecutable);
@@ -407,7 +405,9 @@ public class OpenSRPSyncAccessDecisionTest {
 
     ArgumentCaptor<Bundle> bundleArgumentCaptor = ArgumentCaptor.forClass(Bundle.class);
 
-    testInstance.setFhirR4Context(fhirR4Context);
+    FhirContext realFhirContext = FhirContext.forR4();
+
+    testInstance.setFhirR4Context(realFhirContext);
 
     RequestDetailsReader requestDetailsSpy = Mockito.mock(RequestDetailsReader.class);
 
@@ -468,7 +468,6 @@ public class OpenSRPSyncAccessDecisionTest {
     locationIds.add("Location-1");
     testInstance = Mockito.spy(createOpenSRPSyncAccessDecisionTestInstance());
 
-    FhirContext fhirR4Context = mock(FhirContext.class);
     IGenericClient iGenericClient = mock(IGenericClient.class);
     ITransaction iTransaction = mock(ITransaction.class);
     ITransactionTyped<Bundle> iClientExecutable = mock(ITransactionTyped.class);
@@ -484,7 +483,9 @@ public class OpenSRPSyncAccessDecisionTest {
 
     ArgumentCaptor<Bundle> bundleArgumentCaptor = ArgumentCaptor.forClass(Bundle.class);
 
-    testInstance.setFhirR4Context(fhirR4Context);
+    FhirContext realFhirContext = FhirContext.forR4();
+
+    testInstance.setFhirR4Context(realFhirContext);
 
     RequestDetailsReader requestDetailsSpy = Mockito.mock(RequestDetailsReader.class);
 
@@ -494,7 +495,6 @@ public class OpenSRPSyncAccessDecisionTest {
     URL listUrl = Resources.getResource("test_list_resource.json");
     String testListJson = Resources.toString(listUrl, StandardCharsets.UTF_8);
 
-    FhirContext realFhirContext = FhirContext.forR4();
     ListResource listResource =
         (ListResource) realFhirContext.newJsonParser().parseResource(testListJson);
 
@@ -510,7 +510,7 @@ public class OpenSRPSyncAccessDecisionTest {
         fhirResponseMock, realFhirContext.newJsonParser().encodeResourceToString(bundle));
 
     testInstance.setFhirR4Client(iGenericClient);
-    testInstance.setFhirR4Context(fhirR4Context);
+    testInstance.setFhirR4Context(realFhirContext);
     String resultContent = testInstance.postProcess(requestDetailsSpy, fhirResponseMock);
 
     Mockito.verify(iTransaction).withBundle(bundleArgumentCaptor.capture());
@@ -545,8 +545,10 @@ public class OpenSRPSyncAccessDecisionTest {
   }
 
   private OpenSRPSyncAccessDecision createOpenSRPSyncAccessDecisionTestInstance() {
+    FhirContext fhirR4Context = mock(FhirContext.class);
     OpenSRPSyncAccessDecision accessDecision =
         new OpenSRPSyncAccessDecision(
+            fhirR4Context,
             "sample-keycloak-id",
             "sample-application-id",
             true,

@@ -228,10 +228,9 @@ public class OpenSRPHelper {
     Bundle practitionerOrganizations = getOrganizationsById(practitionerOrganizationIds);
 
     List<Organization> teams = mapBundleToOrganizations(practitionerOrganizations);
-    // TODO Fix Distinct
     List<Organization> bothOrganizations =
         Stream.concat(managingOrganizationTeams.stream(), teams.stream())
-            .distinct()
+            .filter(distinctByKey(Organization::getId))
             .collect(Collectors.toList());
 
     fhirPractitionerDetails.setOrganizations(bothOrganizations);
@@ -290,9 +289,9 @@ public class OpenSRPHelper {
         .execute();
   }
 
-  public static <T> Predicate<T> distinctByKey(Function<? super T, ?> keyExtractor) {
+  public static <T> Predicate<T> distinctByKey(Function<? super T, ?> uniqueKeyExtractor) {
     Set<Object> seen = ConcurrentHashMap.newKeySet();
-    return t -> seen.add(keyExtractor.apply(t));
+    return t -> seen.add(uniqueKeyExtractor.apply(t));
   }
 
   private List<PractitionerRole> getPractitionerRolesByPractitionerId(String practitionerId) {

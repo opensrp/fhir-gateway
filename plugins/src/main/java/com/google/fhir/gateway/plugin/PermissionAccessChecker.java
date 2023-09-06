@@ -49,6 +49,7 @@ public class PermissionAccessChecker implements AccessChecker {
   private OpenSRPSyncAccessDecision openSRPSyncAccessDecision;
 
   private PermissionAccessChecker(
+      FhirContext fhirContext,
       String keycloakUUID,
       List<String> userRoles,
       ResourceFinderImp resourceFinder,
@@ -68,6 +69,7 @@ public class PermissionAccessChecker implements AccessChecker {
     this.userRoles = userRoles;
     this.openSRPSyncAccessDecision =
         new OpenSRPSyncAccessDecision(
+            fhirContext,
             keycloakUUID,
             applicationId,
             true,
@@ -198,15 +200,14 @@ public class PermissionAccessChecker implements AccessChecker {
       return JwtUtil.getClaimOrDie(jwt, FHIR_CORE_APPLICATION_ID_CLAIM);
     }
 
-    private IGenericClient createFhirClientForR4() {
+    private IGenericClient createFhirClientForR4(FhirContext fhirContext) {
       String fhirServer = System.getenv(PROXY_TO_ENV);
-      FhirContext ctx = FhirContext.forR4();
-      IGenericClient client = ctx.newRestfulGenericClient(fhirServer);
+      IGenericClient client = fhirContext.newRestfulGenericClient(fhirServer);
       return client;
     }
 
-    private Composition readCompositionResource(String applicationId) {
-      IGenericClient client = createFhirClientForR4();
+    private Composition readCompositionResource(String applicationId, FhirContext fhirContext) {
+      IGenericClient client = createFhirClientForR4(fhirContext);
       Bundle compositionBundle =
           client
               .search()
@@ -224,16 +225,14 @@ public class PermissionAccessChecker implements AccessChecker {
     }
 
     private String getBinaryResourceReference(Composition composition) {
-      List<Integer> indexes = new ArrayList<>();
       String id = "";
       if (composition != null && composition.getSection() != null) {
-        indexes =
-            composition.getSection().stream()
-                .filter(v -> v.getFocus().getIdentifier() != null)
-                .filter(v -> v.getFocus().getIdentifier().getValue() != null)
-                .filter(v -> v.getFocus().getIdentifier().getValue().equals("application"))
-                .map(v -> composition.getSection().indexOf(v))
-                .collect(Collectors.toList());
+        composition.getSection().stream()
+            .filter(v -> v.getFocus().getIdentifier() != null)
+            .filter(v -> v.getFocus().getIdentifier().getValue() != null)
+            .filter(v -> v.getFocus().getIdentifier().getValue().equals("application"))
+            .map(v -> composition.getSection().indexOf(v))
+            .collect(Collectors.toList());
         Composition.SectionComponent sectionComponent = composition.getSection().get(0);
         Reference focus = sectionComponent != null ? sectionComponent.getFocus() : null;
         id = focus != null ? focus.getReference() : null;
@@ -241,8 +240,9 @@ public class PermissionAccessChecker implements AccessChecker {
       return id;
     }
 
-    private Binary findApplicationConfigBinaryResource(String binaryResourceId) {
-      IGenericClient client = createFhirClientForR4();
+    private Binary findApplicationConfigBinaryResource(
+        String binaryResourceId, FhirContext fhirContext) {
+      IGenericClient client = createFhirClientForR4(fhirContext);
       Binary binary = null;
       if (!binaryResourceId.isBlank()) {
         binary = client.read().resource(Binary.class).withId(binaryResourceId).execute();
@@ -266,9 +266,9 @@ public class PermissionAccessChecker implements AccessChecker {
       return syncStrategy;
     }
 
-    private PractitionerDetails readPractitionerDetails(String keycloakUUID) {
-      IGenericClient client = createFhirClientForR4();
-      //            Map<>
+    private PractitionerDetails readPractitionerDetails(
+        String keycloakUUID, FhirContext fhirContext) {
+      IGenericClient client = createFhirClientForR4(fhirContext);
       Bundle practitionerDetailsBundle =
           client
               .search()
@@ -309,11 +309,12 @@ public class PermissionAccessChecker implements AccessChecker {
         throws AuthenticationException {
       List<String> userRoles = getUserRolesFromJWT(jwt);
       String applicationId = getApplicationIdFromJWT(jwt);
-      Composition composition = readCompositionResource(applicationId);
+      Composition composition = readCompositionResource(applicationId, fhirContext);
       String binaryResourceReference = getBinaryResourceReference(composition);
-      Binary binary = findApplicationConfigBinaryResource(binaryResourceReference);
+      Binary binary = findApplicationConfigBinaryResource(binaryResourceReference, fhirContext);
       String syncStrategy = findSyncStrategy(binary);
-      PractitionerDetails practitionerDetails = readPractitionerDetails(jwt.getSubject());
+      PractitionerDetails practitionerDetails =
+          readPractitionerDetails(jwt.getSubject(), fhirContext);
       List<CareTeam> careTeams;
       List<Organization> organizations;
       List<String> careTeamIds = new ArrayList<>();
@@ -352,6 +353,7 @@ public class PermissionAccessChecker implements AccessChecker {
         }
       }
       return new PermissionAccessChecker(
+          fhirContext,
           jwt.getSubject(),
           userRoles,
           ResourceFinderImp.getInstance(fhirContext),
