@@ -360,7 +360,7 @@ public class PermissionAccessChecker implements AccessChecker {
       List<String> organizationIds = new ArrayList<>();
       List<String> locationIds = new ArrayList<>();
       if (StringUtils.isNotBlank(syncStrategy)) {
-        if (syncStrategy.equals(Constants.CARE_TEAM)) {
+        if (Constants.CARE_TEAM.equalsIgnoreCase(syncStrategy)) {
           careTeams =
               practitionerDetails != null
                       && practitionerDetails.getFhirPractitionerDetails() != null
@@ -371,7 +371,7 @@ public class PermissionAccessChecker implements AccessChecker {
               careTeamIds.add(careTeam.getIdElement().getIdPart());
             }
           }
-        } else if (syncStrategy.equals(Constants.ORGANIZATION)) {
+        } else if (Constants.ORGANIZATION.equalsIgnoreCase(syncStrategy)) {
           organizations =
               practitionerDetails != null
                       && practitionerDetails.getFhirPractitionerDetails() != null
@@ -382,7 +382,7 @@ public class PermissionAccessChecker implements AccessChecker {
               organizationIds.add(organization.getIdElement().getIdPart());
             }
           }
-        } else if (syncStrategy.equals(Constants.LOCATION)) {
+        } else if (Constants.LOCATION.equalsIgnoreCase(syncStrategy)) {
           locationIds =
               practitionerDetails != null
                       && practitionerDetails.getFhirPractitionerDetails() != null
@@ -390,9 +390,12 @@ public class PermissionAccessChecker implements AccessChecker {
                       practitionerDetails.getFhirPractitionerDetails().getLocationHierarchyList())
                   : locationIds;
         }
-      }
+      } else
+        throw new IllegalStateException(
+            "Sync strategy not configured. Please confirm Keycloak fhir_core_app_id attribute for"
+                + " the user matches the Composition.json config official identifier value");
 
-      BenchmarkingHelper.printCompletedInDuration(start, "create ", logger);
+      BenchmarkingHelper.printCompletedInDuration(start, "create", logger);
 
       return new PermissionAccessChecker(
           fhirContext,

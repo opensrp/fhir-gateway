@@ -21,30 +21,10 @@ public class BenchmarkingHelper {
   public static void printCompletedInDuration(long startTime, String methodDetails, Logger logger) {
     long nanoSecondsTaken = System.nanoTime() - startTime;
     long millSecondsTaken = nanoSecondsTaken / 1000000;
-    logger.error(
+    logger.info(
         String.format(
-            "########## %s completed in %s : Metric in seconds - %d : Metric in nanoseconds - %d",
-            methodDetails,
-            getHumanDuration(millSecondsTaken),
-            millSecondsTaken / 1000,
-            nanoSecondsTaken));
-  }
-
-  public static String getHumanDuration(long milliseconds) {
-
-    long minutes = (milliseconds / 1000) / 60;
-    long seconds = (milliseconds / 1000) % 60;
-    String secondsStr = Long.toString(seconds);
-    String secs;
-    if (secondsStr.length() >= 2) {
-      secs = secondsStr.substring(0, 2);
-    } else {
-      secs = "0" + secondsStr;
-    }
-
-    return minutes == 0 && seconds == 0
-        ? "less than a second"
-        : minutes + " mins " + secs + " secs";
+            "########## %s : Metric in seconds - %d : Metric in nanoseconds - %d",
+            methodDetails, millSecondsTaken / 1000, nanoSecondsTaken));
   }
 
   public static long startBenchmarking() {
