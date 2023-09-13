@@ -170,8 +170,27 @@ public abstract class HttpFhirClient {
       logger.info("########## SOCKET_TIMEOUT set to " + System.getenv(SOCKET_TIMEOUT) + " seconds");
     }
 
+    HttpClientBuilder httpClientBuilder = HttpClientBuilder.create();
+
+    if (StringUtils.isNotBlank(System.getenv(MAX_CONNECTION_TOTAL))) {
+      httpClientBuilder.setMaxConnTotal(Integer.valueOf(System.getenv(MAX_CONNECTION_TOTAL)));
+      logger.info(
+          "########## MAX_CONNECTION_TOTAL set to "
+              + System.getenv(MAX_CONNECTION_TOTAL)
+              + " seconds");
+    }
+
+    if (StringUtils.isNotBlank(System.getenv(MAX_CONNECTION_PER_ROUTE))) {
+      httpClientBuilder.setMaxConnPerRoute(
+          Integer.valueOf(System.getenv(MAX_CONNECTION_PER_ROUTE)));
+      logger.info(
+          "########## MAX_CONNECTION_PER_ROUTE set to "
+              + System.getenv(MAX_CONNECTION_PER_ROUTE)
+              + " seconds");
+    }
+
     HttpClient httpClient =
-        HttpClientBuilder.create().setDefaultRequestConfig(configBuilder.build()).build();
+        httpClientBuilder.setDefaultRequestConfig(configBuilder.build()).build();
 
     // Execute the request and process the results.
     HttpResponse response = httpClient.execute(httpRequest);
@@ -221,4 +240,6 @@ public abstract class HttpFhirClient {
   public static final String SOCKET_TIMEOUT = "GATEWAY_SOCKET_TIMEOUT";
   public static final String CONNECTION_REQUEST_TIMEOUT = "GATEWAY_CONNECTION_REQUEST_TIMEOUT";
   public static final String CONNECT_TIMEOUT = "GATEWAY_CONNECT_TIMEOUT";
+  public static final String MAX_CONNECTION_TOTAL = "GATEWAY_MAX_CONNECTION_TOTAL";
+  public static final String MAX_CONNECTION_PER_ROUTE = "GATEWAY_MAX_CONNECTION_PER_ROUTE";
 }
