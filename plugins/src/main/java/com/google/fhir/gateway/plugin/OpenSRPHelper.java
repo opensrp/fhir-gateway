@@ -138,9 +138,9 @@ public class OpenSRPHelper {
 
     careTeamList.addAll(attributedCareTeams);
 
-    logger.error(
-        "##### OpenSRPHelper.getAttributedPractitionerDetailsByPractitioner() -> CareTeam List"
-            + attributedCareTeams);
+    BenchmarkingHelper.printMessage(
+        "getAttributedPractitionerDetailsByPractitioner() -> CareTeam List" + attributedCareTeams,
+        logger);
 
     for (CareTeam careTeam : careTeamList) {
       // Add current supervisor practitioners

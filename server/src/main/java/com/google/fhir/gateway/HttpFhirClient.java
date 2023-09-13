@@ -27,13 +27,15 @@ import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.methods.RequestBuilder;
 import org.apache.http.entity.ByteArrayEntity;
-import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -144,7 +146,32 @@ public abstract class HttpFhirClient {
     HttpUriRequest httpRequest = builder.build();
     logger.info("Request to the FHIR store is {}", httpRequest);
     // TODO reuse if creation overhead is significant.
-    HttpClient httpClient = HttpClients.createDefault();
+
+    RequestConfig.Builder configBuilder = RequestConfig.custom();
+
+    if (StringUtils.isNotBlank(System.getenv(CONNECT_TIMEOUT))) {
+      configBuilder.setConnectTimeout(Integer.valueOf(System.getenv(CONNECT_TIMEOUT)) * 1000);
+      logger.info(
+          "########## CONNECT_TIMEOUT set to " + System.getenv(CONNECT_TIMEOUT) + " seconds");
+    }
+
+    if (StringUtils.isNotBlank(System.getenv(CONNECTION_REQUEST_TIMEOUT))) {
+      configBuilder.setConnectionRequestTimeout(
+          Integer.valueOf(System.getenv(CONNECTION_REQUEST_TIMEOUT)) * 1000);
+      logger.info(
+          "########## CONNECTION_REQUEST_TIMEOUT set to "
+              + System.getenv(CONNECTION_REQUEST_TIMEOUT)
+              + " seconds");
+    }
+
+    if (StringUtils.isNotBlank(System.getenv(SOCKET_TIMEOUT))) {
+      configBuilder.setConnectionRequestTimeout(
+          Integer.valueOf(System.getenv(SOCKET_TIMEOUT)) * 1000);
+      logger.info("########## SOCKET_TIMEOUT set to " + System.getenv(SOCKET_TIMEOUT) + " seconds");
+    }
+
+    HttpClient httpClient =
+        HttpClientBuilder.create().setDefaultRequestConfig(configBuilder.build()).build();
 
     // Execute the request and process the results.
     HttpResponse response = httpClient.execute(httpRequest);
@@ -190,4 +217,8 @@ public abstract class HttpFhirClient {
       }
     }
   }
+
+  public static final String SOCKET_TIMEOUT = "GATEWAY_SOCKET_TIMEOUT";
+  public static final String CONNECTION_REQUEST_TIMEOUT = "GATEWAY_CONNECTION_REQUEST_TIMEOUT";
+  public static final String CONNECT_TIMEOUT = "GATEWAY_CONNECT_TIMEOUT";
 }

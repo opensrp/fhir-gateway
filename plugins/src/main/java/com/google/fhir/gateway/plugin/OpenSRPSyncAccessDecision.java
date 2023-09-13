@@ -211,7 +211,7 @@ public class OpenSRPSyncAccessDecision implements AccessDecision {
 
     BenchmarkingHelper.printCompletedInDuration(
         start,
-        "postProcess : params include Gateway mode "
+        "postProcess : params include Gateway Mode "
             + (gatewayMode != null ? gatewayMode : "Default"),
         logger);
 

@@ -18,13 +18,18 @@ package com.google.fhir.gateway.plugin;
 import org.slf4j.Logger;
 
 public class BenchmarkingHelper {
+
+  public static void printMessage(String message, Logger logger) {
+    logger.info(message);
+  }
+
   public static void printCompletedInDuration(long startTime, String methodDetails, Logger logger) {
     long nanoSecondsTaken = System.nanoTime() - startTime;
     long millSecondsTaken = nanoSecondsTaken / 1000000;
     logger.info(
         String.format(
-            "########## %s : Metric in seconds - %d : Metric in nanoseconds - %d",
-            methodDetails, millSecondsTaken / 1000, nanoSecondsTaken));
+            "%s : Metric in seconds - %.1f : Metric in nanoseconds - %d",
+            methodDetails, millSecondsTaken / 1000.0, nanoSecondsTaken));
   }
 
   public static long startBenchmarking() {

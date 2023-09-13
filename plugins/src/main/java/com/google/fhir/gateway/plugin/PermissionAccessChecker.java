@@ -226,7 +226,11 @@ public class PermissionAccessChecker implements AccessChecker {
           compositionEntries.size() > 0 ? compositionEntries.get(0) : null;
 
       BenchmarkingHelper.printCompletedInDuration(
-          start, "readCompositionResource : params - applicationid -> " + applicationId, logger);
+          start,
+          "readCompositionResource : params [application id, fhircontext] -"
+              + " applicationid -> "
+              + applicationId,
+          logger);
 
       return compositionEntry != null ? (Composition) compositionEntry.getResource() : null;
     }
@@ -249,7 +253,9 @@ public class PermissionAccessChecker implements AccessChecker {
       }
 
       BenchmarkingHelper.printCompletedInDuration(
-          start, "getBinaryResourceReference: param -> Composition with ID=" + id, logger);
+          start,
+          "getBinaryResourceReference: params [Composition] -> Composition" + " with id=" + id,
+          logger);
 
       return id;
     }
@@ -267,7 +273,9 @@ public class PermissionAccessChecker implements AccessChecker {
 
       BenchmarkingHelper.printCompletedInDuration(
           start,
-          "findApplicationConfigBinaryResource : param binary resource with id=" + binaryResourceId,
+          "findApplicationConfigBinaryResource : param binary resource with"
+              + " id="
+              + binaryResourceId,
           logger);
 
       return binary;
@@ -317,7 +325,11 @@ public class PermissionAccessChecker implements AccessChecker {
               : null;
 
       BenchmarkingHelper.printCompletedInDuration(
-          start, "readPractitionerDetails : params : KeycloakID" + keycloakUUID, logger);
+          start,
+          "readPractitionerDetails : params [keycloakUUID, fhirContext] :"
+              + " KeycloakID"
+              + keycloakUUID,
+          logger);
 
       return practitionerDetailEntry != null
           ? (PractitionerDetails) practitionerDetailEntry.getResource()
