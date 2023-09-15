@@ -201,8 +201,10 @@ public class PermissionAccessChecker implements AccessChecker {
     }
 
     private IGenericClient createFhirClientForR4(FhirContext fhirContext) {
+      long start = BenchmarkingHelper.startBenchmarking();
       String fhirServer = System.getenv(PROXY_TO_ENV);
       IGenericClient client = fhirContext.newRestfulGenericClient(fhirServer);
+      BenchmarkingHelper.printCompletedInDuration(start, "createFhirClientForR4", logger);
       return client;
     }
 

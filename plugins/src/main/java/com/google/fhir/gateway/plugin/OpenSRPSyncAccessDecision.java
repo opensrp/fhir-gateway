@@ -89,12 +89,15 @@ public class OpenSRPSyncAccessDecision implements AccessDecision {
     this.syncStrategy = syncStrategy;
     this.config = getSkippedResourcesConfigs();
     this.roles = roles;
+    long start = BenchmarkingHelper.startBenchmarking();
     try {
       setFhirR4Client(
           fhirR4Context.newRestfulGenericClient(
               System.getenv(PermissionAccessChecker.Factory.PROXY_TO_ENV)));
     } catch (NullPointerException e) {
       logger.error(e.getMessage());
+    } finally {
+      BenchmarkingHelper.printCompletedInDuration(start, "constructor setFhirR4Client", logger);
     }
 
     this.openSRPHelper = new OpenSRPHelper(fhirR4Client);
