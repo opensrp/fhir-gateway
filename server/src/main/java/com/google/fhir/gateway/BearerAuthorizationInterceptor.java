@@ -30,7 +30,6 @@ import com.auth0.jwt.interfaces.DecodedJWT;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.fhir.gateway.interfaces.*;
-
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
@@ -118,8 +117,7 @@ public class BearerAuthorizationInterceptor {
           logger, "Cannot create an AccessChecker!", AuthenticationException.class);
     }
 
-    if(true)
-      return NoOpAccessDecision.accessGranted();
+    if (true) return NoOpAccessDecision.accessGranted();
 
     AccessDecision outcome = accessChecker.checkAccess(requestDetailsReader);
     if (!outcome.canAccess()) {
