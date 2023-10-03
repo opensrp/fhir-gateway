@@ -16,6 +16,7 @@
 package com.google.fhir.gateway.plugin;
 
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.parser.IParser;
 import ca.uhn.fhir.rest.api.RequestTypeEnum;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
 import ca.uhn.fhir.rest.server.exceptions.ForbiddenOperationException;
@@ -66,6 +67,7 @@ public class OpenSRPSyncAccessDecision implements AccessDecision {
   private String keycloakUUID;
   private Gson gson = new Gson();
   private FhirContext fhirR4Context;
+  private IParser fhirR4JsonParser;
   private IGenericClient fhirR4Client;
   private OpenSRPHelper openSRPHelper;
 
@@ -97,6 +99,7 @@ public class OpenSRPSyncAccessDecision implements AccessDecision {
       logger.error(e.getMessage());
     }
 
+    this.fhirR4JsonParser = fhirR4Context.newJsonParser();
     this.openSRPHelper = new OpenSRPHelper(fhirR4Client);
   }
 
@@ -169,7 +172,7 @@ public class OpenSRPSyncAccessDecision implements AccessDecision {
     if (StringUtils.isNotBlank(gatewayMode)) {
 
       resultContent = new BasicResponseHandler().handleResponse(response);
-      IBaseResource responseResource = fhirR4Context.newJsonParser().parseResource(resultContent);
+      IBaseResource responseResource = this.fhirR4JsonParser.parseResource(resultContent);
 
       switch (gatewayMode) {
         case Constants.LIST_ENTRIES:
@@ -187,14 +190,13 @@ public class OpenSRPSyncAccessDecision implements AccessDecision {
       }
 
       if (resultContentBundle != null)
-        resultContent = fhirR4Context.newJsonParser().encodeResourceToString(resultContentBundle);
+        resultContent = this.fhirR4JsonParser.encodeResourceToString(resultContentBundle);
     }
 
     if (includeAttributedPractitioners(request.getRequestPath())) {
       Bundle practitionerDetailsBundle =
           this.openSRPHelper.getSupervisorPractitionerDetailsByKeycloakId(keycloakUUID);
-      resultContent =
-          fhirR4Context.newJsonParser().encodeResourceToString(practitionerDetailsBundle);
+      resultContent = this.fhirR4JsonParser.encodeResourceToString(practitionerDetailsBundle);
     }
 
     return resultContent;

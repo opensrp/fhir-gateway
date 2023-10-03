@@ -405,10 +405,6 @@ public class OpenSRPSyncAccessDecisionTest {
 
     ArgumentCaptor<Bundle> bundleArgumentCaptor = ArgumentCaptor.forClass(Bundle.class);
 
-    FhirContext realFhirContext = FhirContext.forR4();
-
-    testInstance.setFhirR4Context(realFhirContext);
-
     RequestDetailsReader requestDetailsSpy = Mockito.mock(RequestDetailsReader.class);
 
     Mockito.when(requestDetailsSpy.getHeader(OpenSRPSyncAccessDecision.Constants.FHIR_GATEWAY_MODE))
@@ -483,10 +479,6 @@ public class OpenSRPSyncAccessDecisionTest {
 
     ArgumentCaptor<Bundle> bundleArgumentCaptor = ArgumentCaptor.forClass(Bundle.class);
 
-    FhirContext realFhirContext = FhirContext.forR4();
-
-    testInstance.setFhirR4Context(realFhirContext);
-
     RequestDetailsReader requestDetailsSpy = Mockito.mock(RequestDetailsReader.class);
 
     Mockito.when(requestDetailsSpy.getHeader(OpenSRPSyncAccessDecision.Constants.FHIR_GATEWAY_MODE))
@@ -496,7 +488,7 @@ public class OpenSRPSyncAccessDecisionTest {
     String testListJson = Resources.toString(listUrl, StandardCharsets.UTF_8);
 
     ListResource listResource =
-        (ListResource) realFhirContext.newJsonParser().parseResource(testListJson);
+        (ListResource) FhirContext.forR4().newJsonParser().parseResource(testListJson);
 
     Bundle bundle = new Bundle();
     Bundle.BundleEntryComponent bundleEntryComponent = new Bundle.BundleEntryComponent();
@@ -507,10 +499,10 @@ public class OpenSRPSyncAccessDecisionTest {
     HttpResponse fhirResponseMock = Mockito.mock(HttpResponse.class, Answers.RETURNS_DEEP_STUBS);
 
     TestUtil.setUpFhirResponseMock(
-        fhirResponseMock, realFhirContext.newJsonParser().encodeResourceToString(bundle));
+        fhirResponseMock, FhirContext.forR4().newJsonParser().encodeResourceToString(bundle));
 
     testInstance.setFhirR4Client(iGenericClient);
-    testInstance.setFhirR4Context(realFhirContext);
+    testInstance.setFhirR4Context(FhirContext.forR4());
     String resultContent = testInstance.postProcess(requestDetailsSpy, fhirResponseMock);
 
     Mockito.verify(iTransaction).withBundle(bundleArgumentCaptor.capture());
@@ -545,7 +537,7 @@ public class OpenSRPSyncAccessDecisionTest {
   }
 
   private OpenSRPSyncAccessDecision createOpenSRPSyncAccessDecisionTestInstance() {
-    FhirContext fhirR4Context = mock(FhirContext.class);
+    FhirContext fhirR4Context = FhirContext.forR4();
     OpenSRPSyncAccessDecision accessDecision =
         new OpenSRPSyncAccessDecision(
             fhirR4Context,
