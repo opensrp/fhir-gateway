@@ -6,25 +6,27 @@
         "_getpages": "ANY_VALUE"
       },
       "allowExtraParams": true,
-      "allParamsRequired": false
+      "allParamsRequired": false,
+      "requestType": "GET"
     },
     {
       "path": "Composition",
-      "methodType": "GET",
       "queryParams": {
         "identifier":"ANY_VALUE"
       },
       "allowExtraParams": true,
-      "allParamsRequired": true
+      "allParamsRequired": true,
+      "requestType": "GET"
     },
     {
       "path": "Binary",
-      "methodType": "GET",
       "queryParams": {
         "_id":"ANY_VALUE"
       },
       "allowExtraParams": true,
-      "allParamsRequired": true
+      "allParamsRequired": true,
+      "requestType": "GET"
     }
+
   ]
 }
