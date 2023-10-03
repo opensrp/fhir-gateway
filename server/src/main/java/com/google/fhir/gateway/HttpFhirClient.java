@@ -37,6 +37,8 @@ import org.apache.http.impl.client.HttpClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+// TODO evaluate if we can provide the API of HAPI's IGenericClient as well:
+//  https://hapifhir.io/hapi-fhir/docs/client/generic_client.html
 public abstract class HttpFhirClient {
 
   private static final Logger logger = LoggerFactory.getLogger(HttpFhirClient.class);
@@ -64,7 +66,7 @@ public abstract class HttpFhirClient {
   // https://www.hl7.org/fhir/async.html
   // We should NOT copy Content-Length as this is automatically set by the RequestBuilder when
   // setting content Entity; otherwise we will get a ClientProtocolException.
-  // TODO(https://github.com/google/fhir-gateway/issues/60): Allow Accept header
+  // TODO(https://github.com/google/fhir-access-proxy/issues/60): Allow Accept header
   static final Set<String> REQUEST_HEADERS_TO_KEEP =
       Sets.newHashSet(
           "content-type",
@@ -102,6 +104,7 @@ public abstract class HttpFhirClient {
     }
   }
 
+  /** This method is intended to be used only for requests that are relayed to the FHIR store. */
   HttpResponse handleRequest(ServletRequestDetails request) throws IOException {
     String httpMethod = request.getServletRequest().getMethod();
     RequestBuilder builder = RequestBuilder.create(httpMethod);

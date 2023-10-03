@@ -320,8 +320,8 @@ varies by context.
 Each of these approaches are described in the following sections. In each case,
 we briefly describe what is supported in the first release of the access
 gateway. The "first release" is when we open-sourced the project in June 2022 in
-[this GitHub repository](https://github.com/google/fhir-gateway). Let's first
-look at the architecture of the gateway. There are two main components:
+[this GitHub repository](https://github.com/google/fhir-gateway). Let's
+first look at the architecture of the gateway. There are two main components:
 
 **[Server](https://github.com/google/fhir-gateway/tree/main/server/src/main/java/com/google/fhir/gateway)**:
 The core of the access gateway is the "server" which provides a
@@ -367,7 +367,7 @@ The mapping from resources to patients is done through the
 [patient compartment](https://www.hl7.org/fhir/compartmentdefinition-patient.html)
 definition. Note that we can still access many resources in one query; in
 particular through
-[Patient/ID/\$everything](https://hl7.org/fhir/patient-operation-everything.html)
+[Patient/ID/$everything](https://hl7.org/fhir/patient-operation-everything.html)
 queries, we can fetch all updates for a single patient.
 
 This approach helps support both the **flexible-access-control** and
@@ -553,10 +553,10 @@ In the main text, we refer to these examples by "all-patients",
 ## Notes
 
 [^1]:
-  The simplified
-  [Implicit](https://smilecdr.com/docs/smart/smart_on_fhir_authorization_flows.html#launch-flow-implicit-grant)
-  flow could work for our use-case too but that has important security
-  shortcomings. For example, it exposes access_token in URLs which can leak
-  through browser history. Another more important shortcoming is that we cannot
-  implement PKCE in the Implicit flow as the access_token is directly returned
-  in the first request.
+    The simplified
+    [Implicit](https://smilecdr.com/docs/smart/smart_on_fhir_authorization_flows.html#launch-flow-implicit-grant)
+    flow could work for our use-case too but that has important security
+    shortcomings. For example, it exposes access_token in URLs which can leak
+    through browser history. Another more important shortcoming is that we
+    cannot implement PKCE in the Implicit flow as the access_token is directly
+    returned in the first request.

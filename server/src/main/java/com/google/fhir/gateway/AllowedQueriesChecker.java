@@ -92,29 +92,6 @@ class AllowedQueriesChecker {
 
     if (!Strings.isNullOrEmpty(entry.getRequestType())
         && !requestDetails.getRequestType().name().equalsIgnoreCase(entry.getRequestType())) {
-
-      if (!requestDetails.getRequestPath().endsWith(ProxyConstants.HTTP_URL_SEPARATOR)
-          && requestDetails.getRequestPath().contains(ProxyConstants.HTTP_URL_SEPARATOR)
-          && entry.getPath().endsWith(AllowedQueriesConfig.MATCHES_ANY_VALUE)
-          && entry
-              .getPath()
-              .equals(
-                  requestDetails
-                          .getRequestPath()
-                          .substring(
-                              0,
-                              requestDetails
-                                  .getRequestPath()
-                                  .lastIndexOf(ProxyConstants.HTTP_URL_SEPARATOR))
-                      + ProxyConstants.HTTP_URL_SEPARATOR
-                      + AllowedQueriesConfig.MATCHES_ANY_VALUE)) {
-      } else {
-        return false;
-      }
-    }
-
-    if (entry.getRequestType() != null
-        && !(entry.getRequestType().toUpperCase()).equals(requestDetails.getRequestType().name())) {
       return false;
     }
 
