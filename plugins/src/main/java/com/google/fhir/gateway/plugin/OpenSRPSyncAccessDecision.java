@@ -108,8 +108,6 @@ public class OpenSRPSyncAccessDecision implements AccessDecision {
   @Override
   public RequestMutation getRequestMutation(RequestDetailsReader requestDetailsReader) {
 
-    long start = BenchmarkingHelper.startBenchmarking();
-
     RequestMutation requestMutation = null;
     if (isSyncUrl(requestDetailsReader)) {
       if (locationIds.isEmpty() && careTeamIds.isEmpty() && organizationIds.isEmpty()) {
@@ -139,14 +137,6 @@ public class OpenSRPSyncAccessDecision implements AccessDecision {
       }
     }
 
-    BenchmarkingHelper.printCompletedInDuration(
-        start,
-        "getRequestMutation: params by RequestDetailReader "
-            + requestDetailsReader.getRequestType()
-            + " /"
-            + requestDetailsReader.getRequestPath(),
-        logger);
-
     return requestMutation;
   }
 
@@ -171,8 +161,6 @@ public class OpenSRPSyncAccessDecision implements AccessDecision {
   @Override
   public String postProcess(RequestDetailsReader request, HttpResponse response)
       throws IOException {
-
-    long start = BenchmarkingHelper.startBenchmarking();
 
     String resultContent = null;
     Resource resultContentBundle;
@@ -208,12 +196,6 @@ public class OpenSRPSyncAccessDecision implements AccessDecision {
       resultContent =
           fhirR4Context.newJsonParser().encodeResourceToString(practitionerDetailsBundle);
     }
-
-    BenchmarkingHelper.printCompletedInDuration(
-        start,
-        "postProcess : params include Gateway mode "
-            + (gatewayMode != null ? gatewayMode : "Default"),
-        logger);
 
     return resultContent;
   }

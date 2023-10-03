@@ -207,9 +207,6 @@ public class PermissionAccessChecker implements AccessChecker {
     }
 
     private Composition readCompositionResource(String applicationId, FhirContext fhirContext) {
-
-      long start = BenchmarkingHelper.startBenchmarking();
-
       IGenericClient client = createFhirClientForR4(fhirContext);
       Bundle compositionBundle =
           client
@@ -224,17 +221,10 @@ public class PermissionAccessChecker implements AccessChecker {
               : Collections.singletonList(new Bundle.BundleEntryComponent());
       Bundle.BundleEntryComponent compositionEntry =
           compositionEntries.size() > 0 ? compositionEntries.get(0) : null;
-
-      BenchmarkingHelper.printCompletedInDuration(
-          start, "readCompositionResource : params - applicationid -> " + applicationId, logger);
-
       return compositionEntry != null ? (Composition) compositionEntry.getResource() : null;
     }
 
     private String getBinaryResourceReference(Composition composition) {
-
-      long start = BenchmarkingHelper.startBenchmarking();
-
       String id = "";
       if (composition != null && composition.getSection() != null) {
         composition.getSection().stream()
@@ -247,36 +237,20 @@ public class PermissionAccessChecker implements AccessChecker {
         Reference focus = sectionComponent != null ? sectionComponent.getFocus() : null;
         id = focus != null ? focus.getReference() : null;
       }
-
-      BenchmarkingHelper.printCompletedInDuration(
-          start, "getBinaryResourceReference: param -> Composition with ID=" + id, logger);
-
       return id;
     }
 
     private Binary findApplicationConfigBinaryResource(
         String binaryResourceId, FhirContext fhirContext) {
-
-      long start = BenchmarkingHelper.startBenchmarking();
-
       IGenericClient client = createFhirClientForR4(fhirContext);
       Binary binary = null;
       if (!binaryResourceId.isBlank()) {
         binary = client.read().resource(Binary.class).withId(binaryResourceId).execute();
       }
-
-      BenchmarkingHelper.printCompletedInDuration(
-          start,
-          "findApplicationConfigBinaryResource : param binary resource with id=" + binaryResourceId,
-          logger);
-
       return binary;
     }
 
     private String findSyncStrategy(Binary binary) {
-
-      long start = BenchmarkingHelper.startBenchmarking();
-
       byte[] bytes =
           binary != null && binary.getDataElement() != null
               ? Base64.getDecoder().decode(binary.getDataElement().getValueAsString())
@@ -289,17 +263,11 @@ public class PermissionAccessChecker implements AccessChecker {
         if (jsonArray != null && !jsonArray.isEmpty())
           syncStrategy = jsonArray.get(0).getAsString();
       }
-
-      BenchmarkingHelper.printCompletedInDuration(start, "findSyncStrategy", logger);
-
       return syncStrategy;
     }
 
     private PractitionerDetails readPractitionerDetails(
         String keycloakUUID, FhirContext fhirContext) {
-
-      long start = BenchmarkingHelper.startBenchmarking();
-
       IGenericClient client = createFhirClientForR4(fhirContext);
       Bundle practitionerDetailsBundle =
           client
@@ -315,10 +283,6 @@ public class PermissionAccessChecker implements AccessChecker {
           practitionerDetailsBundleEntry != null && practitionerDetailsBundleEntry.size() > 0
               ? practitionerDetailsBundleEntry.get(0)
               : null;
-
-      BenchmarkingHelper.printCompletedInDuration(
-          start, "readPractitionerDetails : params : KeycloakID" + keycloakUUID, logger);
-
       return practitionerDetailEntry != null
           ? (PractitionerDetails) practitionerDetailEntry.getResource()
           : null;
@@ -343,9 +307,6 @@ public class PermissionAccessChecker implements AccessChecker {
         FhirContext fhirContext,
         PatientFinder patientFinder)
         throws AuthenticationException {
-
-      long start = BenchmarkingHelper.startBenchmarking();
-
       List<String> userRoles = getUserRolesFromJWT(jwt);
       String applicationId = getApplicationIdFromJWT(jwt);
       Composition composition = readCompositionResource(applicationId, fhirContext);
@@ -389,14 +350,11 @@ public class PermissionAccessChecker implements AccessChecker {
                   ? OpenSRPHelper.getAttributedLocations(
                       practitionerDetails.getFhirPractitionerDetails().getLocationHierarchyList())
                   : locationIds;
-        }
-      } else
-        throw new IllegalStateException(
-            "Sync strategy not configured. Please confirm Keycloak fhir_core_app_id attribute for"
-                + " the user matches the Composition.json config official identifier value");
-
-      BenchmarkingHelper.printCompletedInDuration(start, "create", logger);
-
+        } else
+          throw new IllegalStateException(
+              "Sync strategy not configured. Please confirm Keycloak fhir_core_app_id attribute for"
+                  + " the user matches the Composition.json config official identifier value");
+      }
       return new PermissionAccessChecker(
           fhirContext,
           jwt.getSubject(),
