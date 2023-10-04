@@ -57,6 +57,10 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           {{- if  .Values.env }}
           env:
+            {{- if .Values.applicationConfig }}
+            - name: SPRING_APPLICATION_JSON
+              value: {{ .Values.applicationConfig | toJson | quote }}
+            {{- end }}
             {{- tpl (toYaml .Values.env) .  | nindent 12 }}
           {{- end }}
           ports:

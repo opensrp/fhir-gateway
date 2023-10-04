@@ -24,7 +24,7 @@ image:
   repository: opensrp/fhir-gateway
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "latest"
+  tag: "v0.1.39"
 
 imagePullSecrets: []
 nameOverride: ""
@@ -152,6 +152,11 @@ pdb:
   enabled: false
   minAvailable: ""
   maxUnavailable: 1
+
+applicationConfig:
+#  server:
+#    max-http-header-size: 40KB
+#  spring:
 
 vpa:
   enabled: false
