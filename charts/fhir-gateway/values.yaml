@@ -24,7 +24,7 @@ image:
   repository: opensrp/fhir-gateway
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "v0.1.39"
+  tag: "v0.1.40"
 
 imagePullSecrets: []
 nameOverride: ""
