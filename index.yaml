@@ -51,6 +51,22 @@ entries:
     version: 0.0.1
   fhir-gateway:
   - apiVersion: v2
+    appVersion: v0.1.40
+    created: "2023-10-05T11:47:00.431496863Z"
+    description: 'This is a simple access-control proxy that sits in front of a [FHIR](https://www.hl7.org/fhir/)
+      store (e.g., a [HAPI FHIR](https://hapifhir.io/) server, [GCP FHIR store](https://cloud.google.com/healthcare-api/docs/concepts/fhir),
+      etc.) and controls access to FHIR resources. '
+    digest: 7d06b43e1413e1ecbd22fda9f32d0097530235129126625787dbb3df3ff57bac
+    icon: https://avatars2.githubusercontent.com/u/7898027?s=200&v=4
+    maintainers:
+    - email: techops@ona.io
+      name: opensrp
+    name: fhir-gateway
+    type: application
+    urls:
+    - https://github.com/opensrp/fhir-gateway/releases/download/fhir-gateway-0.0.4/fhir-gateway-0.0.4.tgz
+    version: 0.0.4
+  - apiVersion: v2
     appVersion: 0.0.1
     created: "2023-04-25T15:11:08.693820647Z"
     description: 'This is a simple access-control proxy that sits in front of a [FHIR](https://www.hl7.org/fhir/)
@@ -66,4 +82,4 @@ entries:
     urls:
     - https://github.com/opensrp/fhir-gateway/releases/download/fhir-gateway-0.0.3/fhir-gateway-0.0.3.tgz
     version: 0.0.3
-generated: "2023-04-25T15:11:08.693852149Z"
+generated: "2023-10-05T11:47:00.431515663Z"
