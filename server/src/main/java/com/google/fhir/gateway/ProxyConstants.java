@@ -38,6 +38,7 @@ public class ProxyConstants {
   static final ContentType JSON_PATCH_CONTENT = ContentType.create(Constants.CT_JSON_PATCH);
   public static final String SYNC_STRATEGY = "syncStrategy";
   public static final String REALM_ACCESS = "realm_access";
+  public static final String APPLICATION = "application";
 
   public interface Literals {
     String EQUALS = "=";

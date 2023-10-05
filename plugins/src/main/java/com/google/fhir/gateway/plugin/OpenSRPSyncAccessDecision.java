@@ -274,7 +274,7 @@ public class OpenSRPSyncAccessDecision implements AccessDecision {
   }
 
   @NotNull
-  private static Bundle.BundleEntryComponent createBundleEntryComponent(
+  public static Bundle.BundleEntryComponent createBundleEntryComponent(
       Bundle.HTTPVerb method, String requestPath, @Nullable String condition) {
 
     Bundle.BundleEntryComponent bundleEntryComponent = new Bundle.BundleEntryComponent();

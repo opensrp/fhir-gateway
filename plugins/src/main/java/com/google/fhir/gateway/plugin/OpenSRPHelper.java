@@ -41,7 +41,6 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.smartregister.model.location.LocationHierarchy;
-import org.smartregister.model.location.ParentChildrenMap;
 import org.smartregister.model.practitioner.FhirPractitionerDetails;
 import org.smartregister.model.practitioner.PractitionerDetails;
 import org.smartregister.utils.Constants;
@@ -181,7 +180,7 @@ public class OpenSRPHelper {
 
     long start = BenchmarkingHelper.startBenchmarking();
 
-    List<ParentChildrenMap> parentChildrenList =
+    List<String> attributedLocationsList =
         locationHierarchies.stream()
             .flatMap(
                 locationHierarchy ->
@@ -190,15 +189,12 @@ public class OpenSRPHelper {
                         .getLocationsHierarchy()
                         .getParentChildren()
                         .stream())
-            .collect(Collectors.toList());
-    List<String> attributedLocationsList =
-        parentChildrenList.stream()
             .flatMap(parentChildren -> parentChildren.getChildIdentifiers().stream())
             .map(it -> getReferenceIDPart(it.toString()))
             .collect(Collectors.toList());
 
     BenchmarkingHelper.printCompletedInDuration(
-        start, "getAttributedLocations " + locationHierarchies, logger);
+        start, "getAttributedLocations " + attributedLocationsList, logger);
 
     return attributedLocationsList;
   }

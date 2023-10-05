@@ -33,6 +33,7 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.methods.RequestBuilder;
 import org.apache.http.entity.ByteArrayEntity;
+import org.apache.http.impl.client.HttpClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -142,8 +143,8 @@ public abstract class HttpFhirClient {
     builder.addHeader(header);
     HttpUriRequest httpRequest = builder.build();
     logger.info("Request to the FHIR store is {}", httpRequest);
-
-    HttpClient httpClient = HttpHelper2.getInstance().getHttpClient();
+    // TODO reuse if creation overhead is significant.
+    HttpClient httpClient = HttpClients.createDefault();
 
     // Execute the request and process the results.
     HttpResponse response = httpClient.execute(httpRequest);
