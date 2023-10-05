@@ -94,6 +94,7 @@ and their default values.
 | `vpa.enabled`                                |             | `false`                                                                                                                                                                                                                                                                                  |
 | `vpa.updatePolicy.updateMode`                |             | `"Off"`                                                                                                                                                                                                                                                                                  |
 | `vpa.resourcePolicy`                         |             | `{}`                                                                                                                                                                                                                                                                                     |
+| `applicationConfig`                          |             | `null`                                                                                                                                                                                                                                                                                   |
 
 ## Overriding Configuration File On Pod Using ConfigMaps
 
