@@ -18,10 +18,8 @@ package com.google.fhir.gateway.plugin;
 import static com.google.fhir.gateway.ProxyConstants.SYNC_STRATEGY;
 
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.model.api.IQueryParameterType;
 import ca.uhn.fhir.rest.api.RequestTypeEnum;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
-import ca.uhn.fhir.rest.param.TokenParam;
 import ca.uhn.fhir.rest.server.exceptions.AuthenticationException;
 import com.auth0.jwt.interfaces.Claim;
 import com.auth0.jwt.interfaces.DecodedJWT;
@@ -56,16 +54,12 @@ public class PermissionAccessChecker implements AccessChecker {
       List<String> userRoles,
       ResourceFinderImp resourceFinder,
       String applicationId,
-      List<String> careTeamIds,
-      List<String> locationIds,
-      List<String> organizationIds,
-      String syncStrategy) {
+      String syncStrategy,
+      Map<String, List<String>> syncStrategyIds) {
     Preconditions.checkNotNull(userRoles);
     Preconditions.checkNotNull(resourceFinder);
     Preconditions.checkNotNull(applicationId);
-    Preconditions.checkNotNull(careTeamIds);
-    Preconditions.checkNotNull(organizationIds);
-    Preconditions.checkNotNull(locationIds);
+    Preconditions.checkNotNull(syncStrategyIds);
     Preconditions.checkNotNull(syncStrategy);
     this.resourceFinder = resourceFinder;
     this.userRoles = userRoles;
@@ -75,9 +69,7 @@ public class PermissionAccessChecker implements AccessChecker {
             keycloakUUID,
             applicationId,
             true,
-            locationIds,
-            careTeamIds,
-            organizationIds,
+            syncStrategyIds,
             syncStrategy,
             userRoles);
   }
@@ -281,18 +273,6 @@ public class PermissionAccessChecker implements AccessChecker {
       return syncStrategy;
     }
 
-    public Map<String, List<IQueryParameterType>> getMapForWhere(String keycloakUUID) {
-      Map<String, List<IQueryParameterType>> hmOut = new HashMap<>();
-      // Adding keycloak-uuid
-      TokenParam tokenParam = new TokenParam("keycloak-uuid");
-      tokenParam.setValue(keycloakUUID);
-      List<IQueryParameterType> lst = new ArrayList<>();
-      lst.add(tokenParam);
-      hmOut.put(PractitionerDetails.SP_KEYCLOAK_UUID, lst);
-
-      return hmOut;
-    }
-
     Pair<Composition, PractitionerDetails> fetchCompositionAndPractitionerDetails(
         String subject, String applicationId, FhirContext fhirContext) {
 
@@ -387,19 +367,42 @@ public class PermissionAccessChecker implements AccessChecker {
       List<String> userRoles = getUserRolesFromJWT(jwt);
       String applicationId = getApplicationIdFromJWT(jwt);
 
-      Pair<String, PractitionerDetails> my =
-          fetchSyncStrategyDetails(jwt.getSubject(), applicationId, fhirContext);
+      Map<String, List<String>> syncStrategyIds =
+          CacheHelper.INSTANCE.cache.get(
+              jwt.getSubject(),
+              k -> {
+                Pair<String, PractitionerDetails> syncStrategyDetails =
+                    fetchSyncStrategyDetails(jwt.getSubject(), applicationId, fhirContext);
 
-      String syncStrategy = my.getLeft();
-      PractitionerDetails practitionerDetails = my.getRight();
+                String syncStrategy = syncStrategyDetails.getLeft();
+                PractitionerDetails practitionerDetails = syncStrategyDetails.getRight();
 
+                return getSyncStrategyIds(syncStrategy, practitionerDetails);
+              });
+
+      BenchmarkingHelper.printCompletedInDuration(start, "create", logger);
+
+      return new PermissionAccessChecker(
+          fhirContext,
+          jwt.getSubject(),
+          userRoles,
+          ResourceFinderImp.getInstance(fhirContext),
+          applicationId,
+          syncStrategyIds.keySet().iterator().next(),
+          syncStrategyIds);
+    }
+
+    @NotNull
+    private static Map<String, List<String>> getSyncStrategyIds(
+        String syncStrategy, PractitionerDetails practitionerDetails) {
+      Map<String, List<String>> resultMap = new HashMap<>();
       List<CareTeam> careTeams;
       List<Organization> organizations;
       List<String> careTeamIds = new ArrayList<>();
       List<String> organizationIds = new ArrayList<>();
       List<String> locationIds = new ArrayList<>();
       if (StringUtils.isNotBlank(syncStrategy)) {
-        if (Constants.CARE_TEAM.equalsIgnoreCase(syncStrategy)) {
+        if (ProxyConstants.CARE_TEAM.equalsIgnoreCase(syncStrategy)) {
           careTeams =
               practitionerDetails != null
                       && practitionerDetails.getFhirPractitionerDetails() != null
@@ -412,7 +415,9 @@ public class PermissionAccessChecker implements AccessChecker {
                   .map(careTeam -> careTeam.getIdElement().getIdPart())
                   .collect(Collectors.toList());
 
-        } else if (Constants.ORGANIZATION.equalsIgnoreCase(syncStrategy)) {
+          resultMap = Map.of(syncStrategy, careTeamIds);
+
+        } else if (ProxyConstants.ORGANIZATION.equalsIgnoreCase(syncStrategy)) {
           organizations =
               practitionerDetails != null
                       && practitionerDetails.getFhirPractitionerDetails() != null
@@ -425,31 +430,37 @@ public class PermissionAccessChecker implements AccessChecker {
                   .map(organization -> organization.getIdElement().getIdPart())
                   .collect(Collectors.toList());
 
-        } else if (Constants.LOCATION.equalsIgnoreCase(syncStrategy)) {
+          resultMap = Map.of(syncStrategy, organizationIds);
+
+        } else if (ProxyConstants.LOCATION.equalsIgnoreCase(syncStrategy)) {
           locationIds =
               practitionerDetails != null
                       && practitionerDetails.getFhirPractitionerDetails() != null
                   ? OpenSRPHelper.getAttributedLocations(
                       practitionerDetails.getFhirPractitionerDetails().getLocationHierarchyList())
                   : locationIds;
+
+          resultMap = Map.of(syncStrategy, locationIds);
         }
       } else
         throw new IllegalStateException(
             "Sync strategy not configured. Please confirm Keycloak fhir_core_app_id attribute for"
                 + " the user matches the Composition.json config official identifier value");
 
-      BenchmarkingHelper.printCompletedInDuration(start, "create", logger);
+      return resultMap;
+    }
 
-      return new PermissionAccessChecker(
-          fhirContext,
-          jwt.getSubject(),
-          userRoles,
-          ResourceFinderImp.getInstance(fhirContext),
-          applicationId,
-          careTeamIds,
-          locationIds,
-          organizationIds,
-          syncStrategy);
+    private static class Result {
+      public final List<String> careTeamIds;
+      public final List<String> organizationIds;
+      public final List<String> locationIds;
+
+      public Result(
+          List<String> careTeamIds, List<String> organizationIds, List<String> locationIds) {
+        this.careTeamIds = careTeamIds;
+        this.organizationIds = organizationIds;
+        this.locationIds = locationIds;
+      }
     }
   }
 }
