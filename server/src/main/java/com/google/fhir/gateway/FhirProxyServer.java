@@ -17,9 +17,11 @@ package com.google.fhir.gateway;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.Constants;
+import ca.uhn.fhir.rest.client.api.IGenericClient;
 import ca.uhn.fhir.rest.server.ApacheProxyAddressStrategy;
 import ca.uhn.fhir.rest.server.RestfulServer;
 import ca.uhn.fhir.rest.server.interceptor.CorsInterceptor;
+import ca.uhn.fhir.storage.interceptor.balp.BalpAuditCaptureInterceptor;
 import com.google.fhir.gateway.interfaces.AccessCheckerFactory;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -62,11 +64,21 @@ public class FhirProxyServer extends RestfulServer {
 
     // Note interceptor registration order is important.
     registerCorsInterceptor();
-
     try {
+
+      HttpFhirClient httpFhirClient = FhirClientFactory.createFhirClientFromEnvVars();
+
+      IGenericClient genericClient =
+          getFhirContext().newRestfulGenericClient(httpFhirClient.getBaseUrl());
+
+      BalpAuditCaptureInterceptor balpInterceptor =
+          new BalpAuditCaptureInterceptor(
+              new BalpAuditEventSink(genericClient), new BalpAuditContextService());
+
+      registerInterceptor(balpInterceptor);
+
       logger.info("Adding BearerAuthorizationInterceptor ");
       AccessCheckerFactory checkerFactory = chooseAccessCheckerFactory();
-      HttpFhirClient httpFhirClient = FhirClientFactory.createFhirClientFromEnvVars();
       TokenVerifier tokenVerifier = TokenVerifier.createFromEnvVars();
       registerInterceptor(
           new BearerAuthorizationInterceptor(

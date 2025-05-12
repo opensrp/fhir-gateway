@@ -17,18 +17,23 @@ package com.google.fhir.gateway;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.interceptor.api.Hook;
+import ca.uhn.fhir.interceptor.api.HookParams;
 import ca.uhn.fhir.interceptor.api.Interceptor;
 import ca.uhn.fhir.interceptor.api.Pointcut;
 import ca.uhn.fhir.rest.api.Constants;
+import ca.uhn.fhir.rest.api.InterceptorInvocationTimingEnum;
+import ca.uhn.fhir.rest.api.RequestTypeEnum;
 import ca.uhn.fhir.rest.api.RestOperationTypeEnum;
+import ca.uhn.fhir.rest.api.server.IPreResourceShowDetails;
 import ca.uhn.fhir.rest.api.server.IRestfulResponse;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
+import ca.uhn.fhir.rest.api.server.SimplePreResourceShowDetails;
+import ca.uhn.fhir.rest.api.server.storage.TransactionDetails;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
 import ca.uhn.fhir.rest.server.RestfulServer;
 import ca.uhn.fhir.rest.server.exceptions.AuthenticationException;
 import ca.uhn.fhir.rest.server.exceptions.ForbiddenOperationException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
-import ca.uhn.fhir.storage.interceptor.balp.BalpAuditCaptureInterceptor;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -47,6 +52,7 @@ import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
+import org.apache.http.util.EntityUtils;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.DomainResource;
 import org.slf4j.Logger;
@@ -156,6 +162,13 @@ public class BearerAuthorizationInterceptor {
     mutateRequest(requestDetails, outcome);
     logger.debug("Authorized request path " + requestPath);
     try {
+      // We need to get the resource first before forwarding the delete operation, otherwise we
+      // can't retrieve it for audit logging
+      var resourceToDelete =
+          requestDetails.getRequestType() == RequestTypeEnum.DELETE
+              ? this.fetchStoredResource(requestDetails)
+              : null;
+
       HttpResponse response = fhirClient.handleRequest(servletDetails);
       HttpUtil.validateResponseEntityExistsOrFail(response, requestPath);
       // TODO communicate post-processing failures to the client; see:
@@ -169,27 +182,80 @@ public class BearerAuthorizationInterceptor {
           if (outcome.getBalpAuditEventSink() != null
               && outcome.getBalpAuditContextService() != null) {
 
-            BalpAuditCaptureInterceptor balpInterceptor =
-                new BalpAuditCaptureInterceptor(
-                    outcome.getBalpAuditEventSink(), outcome.getBalpAuditContextService());
-
             // PoC - for now processing non-Bundle requests only
             switch (requestDetails.getRequestType()) {
+              case GET: // For reads and vReads
+                servletDetails.setRestOperationType(RestOperationTypeEnum.READ);
+                // Note, here we are consuming the stream so expect subsequent reads to fail. For
+                // PoC purposes only
+                var results = EntityUtils.toString(response.getEntity());
+                var parsedFHIRresources =
+                    server.getFhirContext().newJsonParser().parseResource(results);
+
+                SimplePreResourceShowDetails preResourceShowDetails =
+                    new SimplePreResourceShowDetails(parsedFHIRresources);
+                HookParams preShowParams =
+                    new HookParams()
+                        .add(RequestDetails.class, requestDetails)
+                        .addIfMatchesType(ServletRequestDetails.class, servletDetails)
+                        .add(IPreResourceShowDetails.class, preResourceShowDetails);
+                server
+                    .getInterceptorService()
+                    .callHooks(Pointcut.STORAGE_PRESHOW_RESOURCES, preShowParams);
+                break;
+
               case POST:
                 servletDetails.setRestOperationType(RestOperationTypeEnum.CREATE);
-                balpInterceptor.hookStoragePrecommitResourceCreated(
-                    this.getResource(requestDetails), servletDetails);
+
+                TransactionDetails theTransactionDetails = new TransactionDetails();
+                HookParams hookParams =
+                    new HookParams()
+                        .add(IBaseResource.class, this.getResource(requestDetails))
+                        .add(RequestDetails.class, requestDetails)
+                        .addIfMatchesType(ServletRequestDetails.class, servletDetails)
+                        .add(TransactionDetails.class, theTransactionDetails)
+                        .add(
+                            InterceptorInvocationTimingEnum.class,
+                            theTransactionDetails.getInvocationTiming(
+                                Pointcut.STORAGE_PRECOMMIT_RESOURCE_CREATED));
+                server
+                    .getInterceptorService()
+                    .callHooks(Pointcut.STORAGE_PRECOMMIT_RESOURCE_CREATED, hookParams);
+
                 break;
               case PUT:
                 servletDetails.setRestOperationType(RestOperationTypeEnum.UPDATE);
-                IBaseResource oldResource = this.fetchStoredResource(requestDetails);
-                balpInterceptor.hookStoragePrecommitResourceUpdated(
-                    oldResource, this.getResource(requestDetails), servletDetails);
+                IBaseResource oldResource = this.fetchStoredResourcePreviousVersion(requestDetails);
+
+                HookParams params2 =
+                    new HookParams()
+                        .add(IBaseResource.class, oldResource)
+                        .add(IBaseResource.class, this.getResource(requestDetails))
+                        .add(RequestDetails.class, requestDetails)
+                        .addIfMatchesType(ServletRequestDetails.class, servletDetails);
+                server
+                    .getInterceptorService()
+                    .callHooks(Pointcut.STORAGE_PRECOMMIT_RESOURCE_UPDATED, params2);
+
                 break;
               case DELETE:
                 servletDetails.setRestOperationType(RestOperationTypeEnum.DELETE);
-                balpInterceptor.hookStoragePrecommitResourceDeleted(
-                    this.getResource(requestDetails), servletDetails);
+
+                TransactionDetails deleteTransactionDetails = new TransactionDetails();
+                HookParams preCommitParams =
+                    new HookParams()
+                        .add(RequestDetails.class, requestDetails)
+                        .addIfMatchesType(ServletRequestDetails.class, servletDetails)
+                        .add(IBaseResource.class, resourceToDelete)
+                        .add(TransactionDetails.class, deleteTransactionDetails)
+                        .add(
+                            InterceptorInvocationTimingEnum.class,
+                            deleteTransactionDetails.getInvocationTiming(
+                                Pointcut.STORAGE_PRECOMMIT_RESOURCE_CREATED));
+                server
+                    .getInterceptorService()
+                    .callHooks(Pointcut.STORAGE_PRECOMMIT_RESOURCE_DELETED, preCommitParams);
+
                 break;
               default:
                 break;
@@ -253,19 +319,10 @@ public class BearerAuthorizationInterceptor {
     return null;
   }
 
-  private IBaseResource fetchStoredResource(RequestDetails requestDetails) {
+  private IBaseResource fetchStoredResourcePreviousVersion(RequestDetails requestDetails) {
     IGenericClient genericClient =
         server.getFhirContext().newRestfulGenericClient(fhirClient.getBaseUrl());
-    IBaseResource current =
-        genericClient
-            .read()
-            .resource(
-                server
-                    .getFhirContext()
-                    .getResourceDefinition(requestDetails.getResourceName())
-                    .getImplementingClass())
-            .withId(requestDetails.getId())
-            .execute();
+    IBaseResource current = fetchStoredResource(requestDetails);
     String currentVersion = current.getMeta().getVersionId();
     int prevVersion = Integer.parseInt(currentVersion) - 1;
 
@@ -281,6 +338,20 @@ public class BearerAuthorizationInterceptor {
             .execute();
 
     return previous;
+  }
+
+  private IBaseResource fetchStoredResource(RequestDetails requestDetails) {
+    IGenericClient genericClient =
+        server.getFhirContext().newRestfulGenericClient(fhirClient.getBaseUrl());
+    return genericClient
+        .read()
+        .resource(
+            server
+                .getFhirContext()
+                .getResourceDefinition(requestDetails.getResourceName())
+                .getImplementingClass())
+        .withId(requestDetails.getId())
+        .execute();
   }
 
   private boolean sendGzippedResponse(ServletRequestDetails requestDetails) {
