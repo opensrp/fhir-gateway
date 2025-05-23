@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
 
 class AccessGrantedAndUpdateList implements AccessDecision {
 
-  private static final Logger logger = LoggerFactory.getLogger(AccessDecision.class);
+  private static final Logger logger = LoggerFactory.getLogger(AccessGrantedAndUpdateList.class);
 
   private final FhirContext fhirContext;
   private final HttpFhirClient httpFhirClient;

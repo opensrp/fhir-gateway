@@ -198,4 +198,18 @@ public class TokenVerifier {
     }
     return verifiedJwt;
   }
+
+  public String getClaimIfExists(String claimName, String authHeader) {
+    String claim;
+    try {
+      String bearerToken = authHeader.substring(BEARER_PREFIX.length());
+      DecodedJWT jwt;
+
+      jwt = JWT.decode(bearerToken);
+      claim = JwtUtil.getClaimOrDie(jwt, claimName);
+    } catch (JWTDecodeException | AuthenticationException e) {
+      claim = "";
+    }
+    return claim;
+  }
 }

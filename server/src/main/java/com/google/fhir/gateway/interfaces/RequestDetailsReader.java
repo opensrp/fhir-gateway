@@ -18,6 +18,7 @@ package com.google.fhir.gateway.interfaces;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.RequestTypeEnum;
 import ca.uhn.fhir.rest.api.RestOperationTypeEnum;
+import ca.uhn.fhir.rest.api.server.RequestDetails;
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
@@ -63,4 +64,6 @@ public interface RequestDetailsReader {
   boolean isRespondGzip();
 
   byte[] loadRequestContents();
+
+  RequestDetails getRequestDetails();
 }

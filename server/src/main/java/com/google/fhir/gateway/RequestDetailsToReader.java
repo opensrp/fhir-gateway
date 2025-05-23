@@ -103,4 +103,9 @@ public class RequestDetailsToReader implements RequestDetailsReader {
   public byte[] loadRequestContents() {
     return requestDetails.loadRequestContents();
   }
+
+  @Override
+  public RequestDetails getRequestDetails() {
+    return this.requestDetails;
+  }
 }

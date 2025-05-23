@@ -18,6 +18,7 @@ package com.google.fhir.gateway.interfaces;
 import java.io.IOException;
 import javax.annotation.Nullable;
 import org.apache.http.HttpResponse;
+import org.hl7.fhir.r4.model.Reference;
 
 public interface AccessDecision {
 
@@ -55,4 +56,15 @@ public interface AccessDecision {
    *     content in memory whenever it is not needed for post-processing.
    */
   String postProcess(RequestDetailsReader request, HttpResponse response) throws IOException;
+
+  /**
+   * Returns a Reference to the user that performed the audit event action.
+   *
+   * @param request the client to server request details
+   * @return the {@link Reference} to the user
+   */
+  @Nullable
+  default Reference getUserWho(RequestDetailsReader request) {
+    return null;
+  }
 }

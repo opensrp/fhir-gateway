@@ -35,6 +35,7 @@ import com.google.fhir.gateway.interfaces.AccessDecision;
 import com.google.fhir.gateway.interfaces.NoOpAccessDecision;
 import com.google.fhir.gateway.interfaces.PatientFinder;
 import com.google.fhir.gateway.interfaces.RequestDetailsReader;
+import com.google.fhir.gateway.plugin.audit.BalpAccessDecision;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Objects;
@@ -141,7 +142,7 @@ public class ListAccessChecker implements AccessChecker {
     if (bundle.getTotal() > 1) {
       logger.error(
           String.format(
-              "%s patients with the same ID of one of ths %s returned from the FHIR store.",
+              "%s patients with the same ID of one of the %s returned from the FHIR store.",
               bundle.getTotal(), patientId));
     }
     return (bundle.getTotal() > 0);
@@ -156,31 +157,42 @@ public class ListAccessChecker implements AccessChecker {
    */
   @Override
   public AccessDecision checkAccess(RequestDetailsReader requestDetails) {
+
+    AccessDecision response;
     try {
       // For a Bundle requestDetails.getResourceName() returns null
       if (requestDetails.getRequestType() == RequestTypeEnum.POST
           && requestDetails.getResourceName() == null) {
-        return processBundle(requestDetails);
-      }
-      // Process non-Bundle requests
-      switch (requestDetails.getRequestType()) {
-        case GET:
-          return processGet(requestDetails);
-        case POST:
-          return processPost(requestDetails);
-        case PUT:
-          return processPut(requestDetails);
-        case PATCH:
-          return processPatch(requestDetails);
-        case DELETE:
-          return processDelete(requestDetails);
-        default:
-          return NoOpAccessDecision.accessDenied();
+        response = processBundle(requestDetails);
+      } else {
+        // Process non-Bundle requests
+        switch (requestDetails.getRequestType()) {
+          case GET:
+            response = processGet(requestDetails);
+            break;
+          case POST:
+            response = processPost(requestDetails);
+            break;
+          case PUT:
+            response = processPut(requestDetails);
+            break;
+          case PATCH:
+            response = processPatch(requestDetails);
+            break;
+          case DELETE:
+            response = processDelete(requestDetails);
+            break;
+          default:
+            response = NoOpAccessDecision.accessDenied();
+            break;
+        }
       }
     } catch (IOException e) {
       logger.error("Exception while checking patient existence; denying access! ", e);
-      return NoOpAccessDecision.accessDenied();
+      response = NoOpAccessDecision.accessDenied();
     }
+
+    return new BalpAccessDecision().withAccess(response);
   }
 
   private AccessDecision processGet(RequestDetailsReader requestDetails) {

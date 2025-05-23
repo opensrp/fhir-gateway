@@ -20,6 +20,8 @@ import ca.uhn.fhir.interceptor.api.Hook;
 import ca.uhn.fhir.interceptor.api.Interceptor;
 import ca.uhn.fhir.interceptor.api.Pointcut;
 import ca.uhn.fhir.rest.api.Constants;
+import ca.uhn.fhir.rest.api.RequestTypeEnum;
+import ca.uhn.fhir.rest.api.RestOperationTypeEnum;
 import ca.uhn.fhir.rest.api.server.IRestfulResponse;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.RestfulServer;
@@ -32,11 +34,13 @@ import com.google.common.base.Preconditions;
 import com.google.fhir.gateway.interfaces.AccessChecker;
 import com.google.fhir.gateway.interfaces.AccessCheckerFactory;
 import com.google.fhir.gateway.interfaces.AccessDecision;
+import com.google.fhir.gateway.interfaces.AuditEventHelper;
 import com.google.fhir.gateway.interfaces.RequestDetailsReader;
 import com.google.fhir.gateway.interfaces.RequestMutation;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
+import java.io.StringWriter;
 import java.io.Writer;
 import java.util.Locale;
 import org.apache.http.Header;
@@ -120,6 +124,7 @@ public class BearerAuthorizationInterceptor {
       ExceptionUtil.throwRuntimeExceptionAndLog(
           logger, "Cannot create an AccessChecker!", AuthenticationException.class);
     }
+
     AccessDecision outcome = accessChecker.checkAccess(requestDetailsReader);
     if (!outcome.canAccess()) {
       ExceptionUtil.throwRuntimeExceptionAndLog(
@@ -146,7 +151,20 @@ public class BearerAuthorizationInterceptor {
       serveWellKnown(servletDetails);
       return false;
     }
+
+    RequestDetailsReader requestDetailsReader = new RequestDetailsToReader(requestDetails);
+    setOperationType(
+        requestDetailsReader); // This method invocation (and definition) would best be placed
+    // within RequestDetailsToReader
+
     AccessDecision outcome = checkAuthorization(requestDetails);
+
+    AuditEventHelper auditEventHelper =
+        AuditEventHelperImpl.createNewInstance(
+            server.getFhirContext(),
+            fhirClient.getBaseUrl(),
+            outcome.getUserWho(requestDetailsReader));
+
     mutateRequest(requestDetails, outcome);
     logger.debug("Authorized request path " + requestPath);
     try {
@@ -159,7 +177,7 @@ public class BearerAuthorizationInterceptor {
       if (HttpUtil.isResponseValid(response)) {
         try {
           // For post-processing rationale/example see b/207589782#comment3.
-          content = outcome.postProcess(new RequestDetailsToReader(requestDetails), response);
+          content = outcome.postProcess(requestDetailsReader, response);
         } catch (Exception e) {
           // Note this is after a successful fetch/update of the FHIR store. That success must be
           // passed to the client even if the access related post-processing fails.
@@ -192,7 +210,17 @@ public class BearerAuthorizationInterceptor {
       } else {
         reader = HttpUtil.readerFromEntity(entity);
       }
+
+      StringWriter responseStringWriter = new StringWriter();
+      reader.transferTo(responseStringWriter);
+      String responseStringContent = responseStringWriter.toString();
+
+      auditEventHelper.processAuditEvents(requestDetailsReader, responseStringContent);
+
+      reader = new StringReader(responseStringContent);
+
       replaceAndCopyResponse(reader, writer, server.getServerBaseForRequest(servletDetails));
+
     } catch (IOException e) {
       logger.error(
           String.format(
@@ -203,6 +231,34 @@ public class BearerAuthorizationInterceptor {
 
     // The request processing stops here, hence returning false.
     return false;
+  }
+
+  private void setOperationType(RequestDetailsReader requestDetailsReader) {
+    if (RequestTypeEnum.PATCH.name().equals(requestDetailsReader.getRequestType().name())) {
+      requestDetailsReader.getRequestDetails().setRestOperationType(RestOperationTypeEnum.PATCH);
+    } else if (RequestTypeEnum.PUT.name().equals(requestDetailsReader.getRequestType().name())) {
+      requestDetailsReader.getRequestDetails().setRestOperationType(RestOperationTypeEnum.UPDATE);
+    } else if (RequestTypeEnum.GET.name().equals(requestDetailsReader.getRequestType().name())) {
+      if (requestDetailsReader.getId() != null && requestDetailsReader.getId().hasVersionIdPart()) {
+        requestDetailsReader.getRequestDetails().setRestOperationType(RestOperationTypeEnum.VREAD);
+      } else if (requestDetailsReader.getId() != null
+          && !requestDetailsReader.getId().hasVersionIdPart()) {
+        requestDetailsReader.getRequestDetails().setRestOperationType(RestOperationTypeEnum.READ);
+      } else if (requestDetailsReader.getId() == null
+          && requestDetailsReader.getParameters().containsKey(Constants.PARAM_PAGINGACTION)) {
+        requestDetailsReader
+            .getRequestDetails()
+            .setRestOperationType(RestOperationTypeEnum.GET_PAGE);
+      } else {
+        requestDetailsReader
+            .getRequestDetails()
+            .setRestOperationType(RestOperationTypeEnum.SEARCH_TYPE);
+      }
+    } else if (RequestTypeEnum.POST.name().equals(requestDetailsReader.getRequestType().name())) {
+      requestDetailsReader.getRequestDetails().setRestOperationType(RestOperationTypeEnum.CREATE);
+    } else if (RequestTypeEnum.DELETE.name().equals(requestDetailsReader.getRequestType().name())) {
+      requestDetailsReader.getRequestDetails().setRestOperationType(RestOperationTypeEnum.DELETE);
+    }
   }
 
   private boolean sendGzippedResponse(ServletRequestDetails requestDetails) {
