@@ -1,19 +1,25 @@
 package com.google.fhir.gateway;
 
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.parser.DataFormatException;
+import ca.uhn.fhir.rest.api.RequestTypeEnum;
+import ca.uhn.fhir.rest.api.RestOperationTypeEnum;
 import ca.uhn.fhir.storage.interceptor.balp.BalpConstants;
 import ca.uhn.fhir.storage.interceptor.balp.BalpProfileEnum;
+import ca.uhn.fhir.util.UrlUtil;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.fhir.gateway.interfaces.AuditEventHelper;
 import com.google.fhir.gateway.interfaces.RequestDetailsReader;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.AuditEvent;
 import org.hl7.fhir.r4.model.Bundle;
@@ -25,6 +31,7 @@ import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.Resource;
 import org.hl7.fhir.r4.model.ResourceType;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,13 +47,15 @@ public class AuditEventHelperImpl implements AuditEventHelper {
 
   private final PatientFinderImp patientFinder;
   private final RequestDetailsReader requestDetailsReader;
-  private final String responseContent;
   private final String responseContentLocation;
   private final Reference agentUserWho;
   private final DecodedJWT decodedJWT;
   private final Date periodStartTime;
   private final HttpFhirClient httpFhirClient;
   private final FhirContext fhirContext;
+  private final boolean isPOSTBundle;
+  private final Bundle requestResourceBundle;
+  private final IBaseResource responseResource;
 
   public AuditEventHelperImpl(
       RequestDetailsReader requestDetailsReader,
@@ -59,86 +68,135 @@ public class AuditEventHelperImpl implements AuditEventHelper {
       FhirContext fhirContext) {
     this.patientFinder = PatientFinderImp.getInstance(fhirContext);
     this.requestDetailsReader = requestDetailsReader;
-    this.responseContent = responseContent;
     this.responseContentLocation = responseContentLocation;
     this.agentUserWho = agentUserWho;
     this.decodedJWT = decodedJWT;
     this.periodStartTime = periodStartTime;
     this.httpFhirClient = httpFhirClient;
     this.fhirContext = fhirContext;
+
+    isPOSTBundle =
+        requestDetailsReader.getRequestType() == RequestTypeEnum.POST
+            && requestDetailsReader.getResourceName() == null;
+
+    String requestResourceString =
+        isPOSTBundle
+            ? new String(requestDetailsReader.loadRequestContents(), StandardCharsets.UTF_8)
+            : null;
+
+    requestResourceBundle =
+        requestResourceString != null
+            ? (Bundle) fhirContext.newJsonParser().parseResource(requestResourceString)
+            : null;
+
+    // This condition handles operations with no response body returned e.g. POST/PUT requests with
+    // Prefer: return=minimal HTTP header
+    String serverContentResponse =
+        responseContent.isEmpty()
+            ? getResourceFromContentLocation(this.responseContentLocation)
+            : responseContent;
+
+    responseResource = this.fhirContext.newJsonParser().parseResource(serverContentResponse);
   }
 
-  // TODO handle the case for Bundle operations
   @Override
   public void processAuditEvents() {
     try {
       List<AuditEvent> auditEventList = new ArrayList<>();
 
-      List<IBaseResource> resources = extractFhirResources(responseContent);
+      Map<RestOperationTypeEnum, List<AuditEventBuilder.ResourceContext>> resourcesMap =
+          extractFhirResourcesByRestOperationType();
 
-      switch (this.requestDetailsReader.getRestOperationType()) {
-        case SEARCH_TYPE:
-        case SEARCH_SYSTEM:
-        case GET_PAGE:
-          auditEventList =
-              createAuditEventCore(
-                  resources, BalpProfileEnum.PATIENT_QUERY, BalpProfileEnum.BASIC_QUERY);
-          break;
-
-        case READ:
-        case VREAD:
-          auditEventList =
-              createAuditEventCore(
-                  resources, BalpProfileEnum.PATIENT_READ, BalpProfileEnum.BASIC_READ);
-          break;
-
-        case CREATE:
-          auditEventList =
-              createAuditEventCore(
-                  resources, BalpProfileEnum.PATIENT_CREATE, BalpProfileEnum.BASIC_CREATE);
-          break;
-
-        case UPDATE:
-          auditEventList =
-              createAuditEventCore(
-                  resources, BalpProfileEnum.PATIENT_UPDATE, BalpProfileEnum.PATIENT_UPDATE);
-          break;
-
-        case DELETE:
-
-          // NOTE: The success of processing of DELETE is heavily dependent on server validation
-          // policy e.g. If you have a permission list that references the resource being deleted,
-          // it breaks the delete operation. Likewise if you reference the resource in AuditEvent
-          // such as logging when you first created or updated it the operation breaks. In case of
-          // such an error, AuditEvent.outcome and AuditEvent.outcomeDesc are populated accordingly
-
-          // Also note, this implementation only fully captures that a specific resource was deleted
-          // and by whom but not the compartment owner.
-          // With no access to the actual deleted resource we can't get the compartment owner unless
-          // the resource itself is a Patient. A crude way to get the owner would be to fetch the
-          // actual resource from the database first before creating the AuditEvent.
-
-          // This implementation skips logging Deletes if the operation is conditional (thus no
-          // Resource ID present)
-
-          auditEventList =
-              createAuditEventCore(
-                  resources, BalpProfileEnum.PATIENT_DELETE, BalpProfileEnum.BASIC_DELETE);
-          break;
-
-        default:
-          break;
-      }
+      resourcesMap.forEach(
+          (restOperationType, resources) -> {
+            auditEventList.addAll(getAuditEvents(restOperationType, resources));
+          });
 
       // TODO Investigate bulk saving (batch processing) instead to improve performance. We'll
       // probably need a mechanism for chunking e.g. 100, 200, or 500 batch
       for (AuditEvent auditEvent : auditEventList) {
-        auditEvent.getPeriod().setEnd(new Date());
-        this.httpFhirClient.postResource(auditEvent);
+        if (auditEvent != null) {
+          auditEvent.getPeriod().setEnd(new Date());
+          this.httpFhirClient.postResource(auditEvent);
+        }
       }
     } catch (IOException exception) {
       logger.error(exception.getMessage(), exception);
     }
+  }
+
+  private @NotNull List<AuditEvent> getAuditEvents(
+      RestOperationTypeEnum restOperationType, List<AuditEventBuilder.ResourceContext> resources) {
+    List<AuditEvent> auditEventList = new ArrayList<>();
+    switch (restOperationType) {
+      case SEARCH_TYPE:
+      case SEARCH_SYSTEM:
+      case GET_PAGE:
+        auditEventList =
+            createAuditEventCore(
+                restOperationType,
+                resources,
+                BalpProfileEnum.PATIENT_QUERY,
+                BalpProfileEnum.BASIC_QUERY);
+        break;
+
+      case READ:
+      case VREAD:
+        auditEventList =
+            createAuditEventCore(
+                restOperationType,
+                resources,
+                BalpProfileEnum.PATIENT_READ,
+                BalpProfileEnum.BASIC_READ);
+        break;
+
+      case CREATE:
+        auditEventList =
+            createAuditEventCore(
+                restOperationType,
+                resources,
+                BalpProfileEnum.PATIENT_CREATE,
+                BalpProfileEnum.BASIC_CREATE);
+        break;
+
+      case UPDATE:
+        auditEventList =
+            createAuditEventCore(
+                restOperationType,
+                resources,
+                BalpProfileEnum.PATIENT_UPDATE,
+                BalpProfileEnum.PATIENT_UPDATE);
+        break;
+
+      case DELETE:
+
+        // NOTE: The success of processing of DELETE is heavily dependent on server validation
+        // policy e.g. If you have a permission list that references the resource being deleted,
+        // it breaks the delete operation. Likewise if you reference the resource in AuditEvent
+        // such as logging when you first created or updated it the operation breaks. In case of
+        // such an error, AuditEvent.outcome and AuditEvent.outcomeDesc are populated accordingly
+
+        // Also note, this implementation only fully captures that a specific resource was deleted
+        // and by whom but not the compartment owner.
+        // With no access to the actual deleted resource we can't get the compartment owner unless
+        // the resource itself is a Patient. A crude way to get the owner would be to fetch the
+        // actual resource from the database first before creating the AuditEvent.
+
+        // This implementation skips logging Deletes if the operation is conditional (thus no
+        // Resource ID present)
+
+        auditEventList =
+            createAuditEventCore(
+                restOperationType,
+                resources,
+                BalpProfileEnum.PATIENT_DELETE,
+                BalpProfileEnum.BASIC_DELETE);
+        break;
+
+      default:
+        break;
+    }
+    return auditEventList;
   }
 
   private String getResourceTemplate(String resourceName, String resourceId) {
@@ -146,12 +204,17 @@ public class AuditEventHelperImpl implements AuditEventHelper {
   }
 
   private List<AuditEvent> createAuditEventCore(
-      List<IBaseResource> resources, BalpProfileEnum patientProfile, BalpProfileEnum basicProfile) {
+      RestOperationTypeEnum restOperationType,
+      List<AuditEventBuilder.ResourceContext> resources,
+      BalpProfileEnum patientProfile,
+      BalpProfileEnum basicProfile) {
 
     List<AuditEvent> auditEventList = new ArrayList<>();
 
-    for (IBaseResource iBaseResource : resources) {
+    for (AuditEventBuilder.ResourceContext resourceContext : resources) {
       try {
+
+        IBaseResource iBaseResource = resourceContext.getResourceEntity();
         Preconditions.checkState(iBaseResource instanceof DomainResource);
 
         DomainResource resource = (DomainResource) iBaseResource;
@@ -159,9 +222,21 @@ public class AuditEventHelperImpl implements AuditEventHelper {
         Set<String> patientIds = patientFinder.findPatientIds(resource);
 
         if (!patientIds.isEmpty()) {
-          auditEventList.add(createAuditEvent(resource, patientProfile, patientIds));
+          auditEventList.add(
+              createAuditEvent(
+                  restOperationType,
+                  resource,
+                  patientProfile,
+                  patientIds,
+                  resourceContext.getQueryEntity()));
         } else {
-          auditEventList.add(createAuditEvent(resource, basicProfile, null));
+          auditEventList.add(
+              createAuditEvent(
+                  restOperationType,
+                  resource,
+                  basicProfile,
+                  null,
+                  resourceContext.getQueryEntity()));
         }
       } catch (IllegalStateException exception) {
         logger.error(exception.getMessage(), exception);
@@ -190,50 +265,172 @@ public class AuditEventHelperImpl implements AuditEventHelper {
     return errorCode;
   }
 
-  private List<IBaseResource> extractFhirResources(String _serverContentResponse) {
-    List<IBaseResource> resourceList = new ArrayList<>();
+  private Map<RestOperationTypeEnum, List<AuditEventBuilder.ResourceContext>>
+      extractFhirResourcesByRestOperationType() {
+    Map<RestOperationTypeEnum, List<AuditEventBuilder.ResourceContext>>
+        resourcesByRestOperationMap = new HashMap<>();
 
-    // This condition handles operations with no response body returned e.g. POST/PUT requests with
-    // Prefer: return=minimal HTTP header
-    String serverContentResponse =
-        _serverContentResponse.isEmpty()
-            ? getResourceFromContentLocation(this.responseContentLocation)
-            : _serverContentResponse;
-
-    IBaseResource responseResource =
-        this.fhirContext.newJsonParser().parseResource(serverContentResponse);
+    AuditEventBuilder.QueryEntity queryEntity =
+        AuditEventBuilder.QueryEntity.builder()
+            .completeUrl(requestDetailsReader.getCompleteUrl())
+            .requestType(requestDetailsReader.getRequestType())
+            .fhirServerBase(requestDetailsReader.getFhirServerBase())
+            .requestPath(requestDetailsReader.getRequestPath())
+            .parameters(requestDetailsReader.getParameters())
+            .build();
 
     if (responseResource instanceof Bundle) {
 
-      resourceList =
-          ((Bundle) responseResource)
-              .getEntry().stream()
-                  .map(
-                      it -> {
-                        IBaseResource resource = null;
+      List<Bundle.BundleEntryComponent> responseBundleEntryComponents =
+          ((Bundle) responseResource).getEntry();
 
-                        if (it.hasResource()) {
+      for (int i = 0; i < responseBundleEntryComponents.size(); i++) {
 
-                          resource = it.getResource();
-                        } else if (it.hasResponse()) {
+        IBaseResource bundleEntryComponentResource =
+            extractResourceFromBundleComponent(responseBundleEntryComponents.get(i));
+        AuditEventBuilder.QueryEntity nestedResourceQueryEntity = queryEntity;
 
-                          resource =
-                              fhirContext
-                                  .newJsonParser()
-                                  .parseResource(
-                                      getResourceFromContentLocation(
-                                          it.getResponse().getLocation()));
-                        }
+        RestOperationTypeEnum restOperationType;
+        if (isPOSTBundle) {
 
-                        return resource;
-                      })
-                  .collect(Collectors.toList());
+          nestedResourceQueryEntity =
+              AuditEventBuilder.QueryEntity.builder()
+                  .completeUrl(
+                      String.format(
+                          "%s/%s",
+                          requestDetailsReader.getFhirServerBase(),
+                          requestResourceBundle.getEntry().get(i).getRequest().getUrl()))
+                  .requestType(
+                      RequestTypeEnum.valueOf(
+                          requestResourceBundle.getEntry().get(i).getRequest().getMethod().name()))
+                  .fhirServerBase(requestDetailsReader.getFhirServerBase())
+                  .requestPath(
+                      UrlUtil.determineResourceTypeInResourceUrl(
+                          fhirContext,
+                          requestResourceBundle.getEntry().get(i).getRequest().getUrl()))
+                  .parameters(
+                      UrlUtil.parseQueryString(
+                          getQueryStringFromBundleComponent(
+                              requestResourceBundle.getEntry().get(i))))
+                  .build();
+
+          restOperationType =
+              getRestOperationTypeForBundleEntry(
+                  requestResourceBundle.getEntry().get(i), bundleEntryComponentResource);
+
+        } else {
+
+          restOperationType = requestDetailsReader.getRestOperationType();
+        }
+
+        if (bundleEntryComponentResource instanceof Bundle) {
+
+          processResponseResourceNestedBundle(
+              bundleEntryComponentResource,
+              restOperationType,
+              resourcesByRestOperationMap,
+              nestedResourceQueryEntity);
+
+        } else {
+          processSingleResource(
+              restOperationType,
+              bundleEntryComponentResource,
+              resourcesByRestOperationMap,
+              nestedResourceQueryEntity);
+        }
+      }
 
     } else {
-      resourceList.add(responseResource);
+
+      processSingleResource(
+          requestDetailsReader.getRestOperationType(),
+          responseResource,
+          resourcesByRestOperationMap,
+          queryEntity);
     }
 
-    return resourceList;
+    return resourcesByRestOperationMap;
+  }
+
+  private void processResponseResourceNestedBundle(
+      IBaseResource bundleResource,
+      RestOperationTypeEnum restOperationType,
+      Map<RestOperationTypeEnum, List<AuditEventBuilder.ResourceContext>>
+          resourcesByRestOperationMap,
+      AuditEventBuilder.QueryEntity queryEntity) {
+
+    for (Bundle.BundleEntryComponent nestedBundleEntryComponent :
+        ((Bundle) bundleResource).getEntry()) {
+
+      IBaseResource entryResource = extractResourceFromBundleComponent(nestedBundleEntryComponent);
+
+      if (entryResource instanceof Bundle) {
+
+        processResponseResourceNestedBundle(
+            entryResource, restOperationType, resourcesByRestOperationMap, queryEntity);
+
+      } else {
+        processSingleResource(
+            restOperationType, entryResource, resourcesByRestOperationMap, queryEntity);
+      }
+    }
+  }
+
+  private @Nullable IBaseResource extractResourceFromBundleComponent(
+      Bundle.BundleEntryComponent responseBundleEntryComponent) {
+    IBaseResource resource = null;
+
+    if (responseBundleEntryComponent.hasResource()) {
+      resource = responseBundleEntryComponent.getResource();
+
+    } else if (responseBundleEntryComponent.hasResponse()) {
+      resource =
+          fhirContext
+              .newJsonParser()
+              .parseResource(
+                  getResourceFromContentLocation(
+                      responseBundleEntryComponent.getResponse().getLocation()));
+    }
+    return resource;
+  }
+
+  private RestOperationTypeEnum getRestOperationTypeForBundleEntry(
+      Bundle.BundleEntryComponent requestResourceBundleComponent, IBaseResource resource) {
+
+    RestOperationTypeEnum restOperationType;
+    String queryString = getQueryStringFromBundleComponent(requestResourceBundleComponent);
+
+    restOperationType =
+        FhirUtil.getRestOperationType(
+            requestResourceBundleComponent.getRequest().getMethod().name(),
+            resource instanceof Bundle ? null : resource.getIdElement(),
+            UrlUtil.parseQueryString(queryString));
+
+    return restOperationType;
+  }
+
+  private @NotNull String getQueryStringFromBundleComponent(
+      Bundle.BundleEntryComponent requestResourceBundleComponent) {
+    String requestUrl = requestResourceBundleComponent.getRequest().getUrl();
+    return !Strings.isNullOrEmpty(requestUrl) && requestUrl.contains("?")
+        ? requestUrl.substring(requestUrl.indexOf('?'))
+        : "";
+  }
+
+  private void processSingleResource(
+      RestOperationTypeEnum restOperationType,
+      IBaseResource iBaseResource,
+      Map<RestOperationTypeEnum, List<AuditEventBuilder.ResourceContext>>
+          resourcesByRestOperationMap,
+      AuditEventBuilder.QueryEntity queryEntity) {
+    if (iBaseResource == null) return;
+    resourcesByRestOperationMap
+        .computeIfAbsent(restOperationType, key -> new ArrayList<>())
+        .add(
+            AuditEventBuilder.ResourceContext.builder()
+                .resourceEntity(iBaseResource)
+                .queryEntity(queryEntity)
+                .build());
   }
 
   // If we get here we capture all audit log details except the compartment owner for non-patient
@@ -250,10 +447,11 @@ public class AuditEventHelperImpl implements AuditEventHelper {
     return getResourceTemplate(resourceType, resourceId);
   }
 
-  private AuditEventBuilder initBaseAuditEventBuilder(BalpProfileEnum balpProfile) {
+  private AuditEventBuilder initBaseAuditEventBuilder(
+      RestOperationTypeEnum restOperationType, BalpProfileEnum balpProfile) {
 
     AuditEventBuilder auditEventBuilder = new AuditEventBuilder(this.periodStartTime);
-    auditEventBuilder.restOperationType(this.requestDetailsReader.getRestOperationType());
+    auditEventBuilder.restOperationType(restOperationType);
     auditEventBuilder.agentUserPolicy(
         JwtUtil.getClaimOrDefault(this.decodedJWT, JwtUtil.CLAIM_JWT_ID, ""));
     auditEventBuilder.auditEventAction(balpProfile.getAction());
@@ -274,62 +472,87 @@ public class AuditEventHelperImpl implements AuditEventHelper {
   }
 
   private AuditEvent createAuditEvent(
-      Resource resource, BalpProfileEnum balpProfile, Set<String> compartmentOwners) {
+      RestOperationTypeEnum restOperationType,
+      Resource resource,
+      BalpProfileEnum balpProfile,
+      Set<String> compartmentOwners,
+      AuditEventBuilder.QueryEntity queryEntity) {
 
     if (resource instanceof OperationOutcome) {
 
-      return createAuditEventOperationOutcome((OperationOutcome) resource, balpProfile);
+      return createAuditEventOperationOutcome(
+          restOperationType, (OperationOutcome) resource, balpProfile, queryEntity);
 
     } else {
 
-      return createAuditEventEHR(resource, balpProfile, compartmentOwners);
+      return createAuditEventEHR(
+          restOperationType, resource, balpProfile, compartmentOwners, queryEntity);
     }
   }
 
   private AuditEvent createAuditEventOperationOutcome(
-      OperationOutcome operationOutcomeResource, BalpProfileEnum balpProfile) {
+      RestOperationTypeEnum restOperationType,
+      OperationOutcome operationOutcomeResource,
+      BalpProfileEnum balpProfile,
+      AuditEventBuilder.QueryEntity queryEntity) {
 
-    // We need to capture the context of the operation e.g. Successful DELETE returns
-    // OperationOutcome but no info on the affected resource
-    String processedResource = getResourceFromContentLocation(this.responseContentLocation);
-    IBaseResource resource = fhirContext.newJsonParser().parseResource(processedResource);
+    try {
+      // We need to capture the context of the operation e.g. Successful DELETE returns
+      // OperationOutcome but no info on the affected resource
+      String processedResource = getResourceFromContentLocation(this.responseContentLocation);
+      IBaseResource resource = fhirContext.newJsonParser().parseResource(processedResource);
 
-    Set<String> patientIds =
-        resource instanceof DomainResource
-            ? patientFinder.findPatientIds((DomainResource) resource)
-            : Set.of();
+      Set<String> patientIds =
+          resource instanceof DomainResource
+              ? patientFinder.findPatientIds((DomainResource) resource)
+              : Set.of();
 
-    AuditEventBuilder auditEventBuilder =
-        getAuditEventBuilder((Resource) resource, balpProfile, patientIds);
+      AuditEventBuilder auditEventBuilder =
+          getAuditEventBuilder(
+              restOperationType, (Resource) resource, balpProfile, patientIds, queryEntity);
 
-    OperationOutcome.OperationOutcomeIssueComponent outcomeIssueComponent =
-        operationOutcomeResource.getIssueFirstRep();
+      OperationOutcome.OperationOutcomeIssueComponent outcomeIssueComponent =
+          operationOutcomeResource.getIssueFirstRep();
 
-    String errorDescription =
-        outcomeIssueComponent.getDetails().getText() != null
-            ? outcomeIssueComponent.getDetails().getText()
-            : outcomeIssueComponent.getDiagnostics();
-    auditEventBuilder.outcome(
-        AuditEventBuilder.Outcome.builder()
-            .code(mapOutcomeErrorCode(outcomeIssueComponent.getSeverity()))
-            .description(errorDescription)
-            .build());
+      String errorDescription =
+          outcomeIssueComponent.getDetails().getText() != null
+              ? outcomeIssueComponent.getDetails().getText()
+              : outcomeIssueComponent.getDiagnostics();
+      auditEventBuilder.outcome(
+          AuditEventBuilder.Outcome.builder()
+              .code(mapOutcomeErrorCode(outcomeIssueComponent.getSeverity()))
+              .description(errorDescription)
+              .build());
 
-    return auditEventBuilder.build();
+      return auditEventBuilder.build();
+
+    } catch (DataFormatException dataFormatException) {
+      logger.error(dataFormatException.getMessage(), dataFormatException);
+    }
+    return null;
   }
 
   private AuditEvent createAuditEventEHR(
-      Resource resource, BalpProfileEnum balpProfile, Set<String> compartmentOwners) {
+      RestOperationTypeEnum restOperationType,
+      Resource resource,
+      BalpProfileEnum balpProfile,
+      Set<String> compartmentOwners,
+      AuditEventBuilder.QueryEntity queryEntity) {
 
     AuditEventBuilder auditEventBuilder =
-        getAuditEventBuilder(resource, balpProfile, compartmentOwners);
+        getAuditEventBuilder(
+            restOperationType, resource, balpProfile, compartmentOwners, queryEntity);
 
     return auditEventBuilder.build();
   }
 
   private @NotNull AuditEventBuilder getAuditEventBuilder(
-      Resource resource, BalpProfileEnum balpProfile, Set<String> compartmentOwners) {
-    AuditEventBuilder auditEventBuilder = initBaseAuditEventBuilder(balpProfile);
+      RestOperationTypeEnum restOperationType,
+      Resource resource,
+      BalpProfileEnum balpProfile,
+      Set<String> compartmentOwners,
+      AuditEventBuilder.QueryEntity queryEntity) {
+    AuditEventBuilder auditEventBuilder = initBaseAuditEventBuilder(restOperationType, balpProfile);
 
     if (compartmentOwners != null && !compartmentOwners.isEmpty()) {
       for (String owner : compartmentOwners) {
@@ -343,7 +566,8 @@ public class AuditEventHelperImpl implements AuditEventHelper {
 
     if (BalpProfileEnum.BASIC_QUERY.equals(balpProfile)
         || BalpProfileEnum.PATIENT_QUERY.equals(balpProfile)) {
-      auditEventBuilder.addQuery(this.requestDetailsReader);
+
+      auditEventBuilder.addQuery(queryEntity);
     }
     return auditEventBuilder;
   }
