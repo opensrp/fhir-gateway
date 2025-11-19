@@ -727,9 +727,18 @@ your environment.</p>
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>-e<span class="w"> </span><span class="nv">BACKEND_TYPE</span><span class="o">=</span>HAPI<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span>-e<span class="w"> </span><span class="nv">RUN_MODE</span><span class="o">=</span>PROD<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span>-e<span class="w"> </span><span class="nv">ACCESS_CHECKER</span><span class="o">=</span>list<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span>--network<span class="o">=</span>host<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span>us-docker.pkg.dev/fhir-proxy-build/stable/fhir-gateway:latest
-</code></pre></div></li>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span>-e<span class="w"> </span><span class="nv">AUDIT_EVENT_ACTIONS_CONFIG</span><span class="o">=</span>CRUDE<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span>--network<span class="o">=</span>host<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">  </span>us-docker.pkg.dev/fhir-proxy-build/stable/fhir-gateway:latest
+</code></pre></div>
+   !!! tip "Docker Host Networking Note" The <code>--network=host</code> flag is used to
+   allow the FHIR Information Gateway container to access services running on
+   the host machine (Keycloak and HAPI FHIR server in this case). This flag
+   works on Linux hosts. If you are using Docker Desktop on Windows or Mac, you
+   may need to replace <code>localhost</code> with <code>host.docker.internal</code> in the
+   environment variable values above and remove the <code>--network=host</code> flag.
+   Alternatively for Docker Desktop versions 4.34 and later, you can enable
+   <a href="https://docs.docker.com/engine/network/tutorials/host/#prerequisites">host networking</a>.</li>
 </ol>
 <p>Several environment variables are used to configure FHIR Information Gateway:</p>
 <ul>
@@ -750,10 +759,10 @@ your environment.</p>
   <a href="https://github.com/google/fhir-gateway/blob/main/plugins/src/main/java/com/google/fhir/gateway/plugin/PatientAccessChecker.java"><code>patient</code></a>
   example access-checkers.</li>
 <li><code>AUDIT_EVENT_ACTIONS_CONFIG</code>: A flag to configure AuditEvent logging. Set to
-  either <code>C</code>,<code>R</code>,<code>U</code>,<code>D</code> or <code>E</code> to enable and select the audit event actions to
-  be logged. This model is guided by the value set codes defined here -
-  https://hl7.org/fhir/R4/valueset-audit-event-action.html. Absence of any
-  (valid) means audit logging is disabled.</li>
+  either <code>C</code>,<code>R</code>,<code>U</code>,<code>D</code>,<code>E</code> or all of them to enable and select the audit event
+  actions to be logged. This model is guided by the value set codes defined
+  here - https://hl7.org/fhir/R4/valueset-audit-event-action.html. Absence of
+  any (valid) means audit logging is disabled.</li>
 </ul>
 <div class="admonition tip">
 <p class="admonition-title">GCP Note</p>
@@ -830,6 +839,15 @@ authentication flow, including refresh tokens.</p>
 </code></pre></div>
 <p>You should get a response of
 <code>User is not authorized to GET http://localhost:8080/fhir/Patient/3</code>.</p>
+</li>
+<li>
+<p>For the first patient that the user had access to, confirm an AuditEvent
+    resource was created.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>curl<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json; charset=utf-8&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="s1">&#39;http://localhost:8099/fhir/AuditEvent?patient=75270&#39;</span>
+</code></pre></div>
+<p>You should get a response of an AuditEvent resource (contained in a Bundle
+resource) that logs the read access to the Patient resource.</p>
 </li>
 </ol>
 

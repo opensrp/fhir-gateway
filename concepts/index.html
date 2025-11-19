@@ -927,12 +927,12 @@ also has examples for implementing custom end-points.</p>
 </li>
 <li>
 <p><code>AUDIT_EVENT_ACTIONS_CONFIG</code>: A flag to configure AuditEvent logging. Set to a
-  subset of <code>C</code>,<code>R</code>,<code>U</code>,<code>D</code> or <code>E</code> to enable and select the audit event actions
-  to be logged. This model is guided by the value set codes defined here -
-  https://hl7.org/fhir/R4/valueset-audit-event-action.html. When no value is set
-  or the value is an empty string, audit logging is disabled. If any other
-  character is set other than the predefined values, the server will fail to
-  start.</p>
+  subset of <code>C</code>,<code>R</code>,<code>U</code>,<code>D</code>,<code>E</code> or all of them to enable and select the audit
+  event actions to be logged. This model is guided by the value set codes
+  defined here - https://hl7.org/fhir/R4/valueset-audit-event-action.html. When
+  no value is set or the value is an empty string, audit logging is disabled. If
+  any other character is set other than the predefined values, the server will
+  fail to start.</p>
 </li>
 </ul>
 <p>For more information on audit event logging, see
