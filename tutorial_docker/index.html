@@ -720,8 +720,9 @@ your environment.</p>
 <p>The server is preloaded with synthetic patient data and a FHIR
    <code>List/patient-list-example</code> resource.</p>
 <ol>
-<li>Run the FHIR Information Gateway Docker image with the <code>list</code> access checker.
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>docker<span class="w"> </span>run<span class="w"> </span><span class="se">\</span>
+<li>Run the FHIR Information Gateway Docker image with the <code>list</code> access checker.</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>docker<span class="w"> </span>run<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>-e<span class="w"> </span><span class="nv">TOKEN_ISSUER</span><span class="o">=</span>http://localhost:9080/auth/realms/test<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>-e<span class="w"> </span><span class="nv">PROXY_TO</span><span class="o">=</span>http://localhost:8099/fhir<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>-e<span class="w"> </span><span class="nv">BACKEND_TYPE</span><span class="o">=</span>HAPI<span class="w"> </span><span class="se">\</span>
@@ -731,15 +732,15 @@ your environment.</p>
 <a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span>--network<span class="o">=</span>host<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">  </span>us-docker.pkg.dev/fhir-proxy-build/stable/fhir-gateway:latest
 </code></pre></div>
-   !!! tip "Docker Host Networking Note" The <code>--network=host</code> flag is used to
-   allow the FHIR Information Gateway container to access services running on
-   the host machine (Keycloak and HAPI FHIR server in this case). This flag
-   works on Linux hosts. If you are using Docker Desktop on Windows or Mac, you
-   may need to replace <code>localhost</code> with <code>host.docker.internal</code> in the
-   environment variable values above and remove the <code>--network=host</code> flag.
-   Alternatively for Docker Desktop versions 4.34 and later, you can enable
-   <a href="https://docs.docker.com/engine/network/tutorials/host/#prerequisites">host networking</a>.</li>
-</ol>
+<p>!!! tip "Docker Host Networking Note"</p>
+<p>The <code>--network=host</code> flag is used to allow the FHIR Information Gateway
+   container to access services running on the host machine (Keycloak and HAPI
+   FHIR server in this case). This flag works on Linux hosts. If you are using
+   Docker Desktop on Windows or Mac, you may need to replace <code>localhost</code> with
+   <code>host.docker.internal</code> in the environment variable values above and remove
+   the <code>--network=host</code> flag. Alternatively for Docker Desktop versions 4.34 and
+   later, you can enable
+   <a href="https://docs.docker.com/engine/network/drivers/host/#docker-desktop">host networking</a>.</p>
 <p>Several environment variables are used to configure FHIR Information Gateway:</p>
 <ul>
 <li><code>TOKEN_ISSUER</code>: The URL of the token issuer. For Keycloak this is typically
@@ -846,7 +847,7 @@ authentication flow, including refresh tokens.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>curl<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json; charset=utf-8&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="s1">&#39;http://localhost:8099/fhir/AuditEvent?patient=75270&#39;</span>
 </code></pre></div>
-<p>You should get a response of an AuditEvent resource (contained in a Bundle
+<p>You should get a response with an AuditEvent resource (contained in a Bundle
 resource) that logs the read access to the Patient resource.</p>
 </li>
 </ol>
